@@ -23,6 +23,7 @@ interface MyInputFieldProps {
     textAlignVertical?: 'auto' | 'top' | 'bottom' | 'center';
     keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad'; // Thêm prop keyboardType
     autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'; // Thêm prop autoCapitalize
+    editable?: boolean;
 }
 
 const MyInputField: React.FC<MyInputFieldProps> = ({
@@ -42,6 +43,7 @@ const MyInputField: React.FC<MyInputFieldProps> = ({
     textAlignVertical,
     keyboardType,
     autoCapitalize,
+    editable = true,
 }) => {
     const [fontLoaded, setFontLoaded] = useState(false);
     const { colors } = useThemeContext(); // Lấy colors từ theme context
@@ -63,7 +65,7 @@ const MyInputField: React.FC<MyInputFieldProps> = ({
             style={[
                 styles.container,
                 style,
-                { backgroundColor: backgroundColor || colors.cardBackground }, // Sử dụng backgroundColor từ prop hoặc theme
+                { backgroundColor: backgroundColor || colors.box1 }, // Sử dụng backgroundColor từ prop hoặc theme
             ]}
         >
             {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
@@ -71,15 +73,16 @@ const MyInputField: React.FC<MyInputFieldProps> = ({
             <TextInput
                 value={value}
                 onChangeText={onChangeText}
-                style={[styles.input, { fontFamily: 'InterReguler', color: colors.textColor }, textStyle]}
+                style={[styles.input, { fontFamily: 'InterReguler', color: colors.text1 }, textStyle]}
                 secureTextEntry={secureTextEntry}
                 placeholder={placeholder}
-                placeholderTextColor={colors.secondaryTextColor} // Sử dụng màu placeholder từ theme
+                placeholderTextColor={colors.text3} // Sử dụng màu placeholder từ theme
                 multiline={multiline}
                 scrollEnabled={scrollEnabled}
                 textAlignVertical={textAlignVertical}
                 keyboardType={keyboardType}
                 autoCapitalize={autoCapitalize}
+                editable={editable}
             />
 
             {rightIcon && (

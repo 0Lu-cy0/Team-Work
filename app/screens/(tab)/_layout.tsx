@@ -11,6 +11,7 @@ import CustomText from '@/constants/CustomText';
 import stylesHome from '@/styles/home';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@/services/supabase';
+import Icon from '@/components/Icon';
 
 const Tab = createBottomTabNavigator();
 
@@ -19,31 +20,26 @@ const CustomHeaderLeft = () => {
 
     return (
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerLeft}>
-            <Image
-                source={{
-                    uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/73bab2b3-7af2-4c18-8925-df3a35fd3758',
-                }}
-                style={{ width: 24, height: 24 }}
-            />
+            <Icon category="topTab" name="back" style={{ width: 24, height: 24 }} />
         </TouchableOpacity>
     );
 };
 
 const CustomHeaderRight = ({ routeName }: { routeName: string }) => {
     const router = useRouter();
-    let iconUri = '';
+    let iconName = '';
     let onPressHandler = () => { };
 
     if (routeName === 'Messages') {
-        iconUri = 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/aab647bb-3d80-4f84-ae50-8dfcd9de6a7b';
+        iconName = 'add';
         onPressHandler = () => router.push('../newMessage');
     } else if (routeName === 'Schedule') {
-        iconUri = 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/929d193f-258d-4264-afa9-f7c94018fe2e';
+        iconName = 'filter';
     }
 
     return (
         <TouchableOpacity style={styles.headerRight} onPress={onPressHandler}>
-            {iconUri ? <Image source={{ uri: iconUri }} style={{ width: 24, height: 24 }} /> : null}
+            {iconName ? <Icon category="screens" name={iconName} style={{ width: 24, height: 24 }} /> : null}
         </TouchableOpacity>
     );
 };
@@ -64,7 +60,7 @@ const TabRoot = () => {
         if (user) {
             setUserId(user.id); // Lưu user ID
             const { data, error: profileError } = await supabase
-                .from('users')
+                .from('users') // Đảm bảo bảng này đúng (có thể là 'profiles')
                 .select('full_name, avatar')
                 .eq('id', user.id)
                 .single();
@@ -96,7 +92,6 @@ const TabRoot = () => {
                 )
                 .subscribe();
 
-            // Dọn dẹp kênh khi component unmount hoặc userId thay đổi
             return () => {
                 supabase.removeChannel(userChannel);
             };
@@ -125,41 +120,31 @@ const TabRoot = () => {
                     shadowOpacity: 0,
                 },
                 tabBarIcon: ({ focused }) => {
-                    let iconSource;
+                    let category = 'tabbar' as const;
+                    let name = '';
 
                     switch (route.name) {
                         case 'Home':
-                            iconSource = focused
-                                ? 'https://figma-alpha-api.s3.us#25818a'
-                                : 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/f2d115b5-0641-4d9f-9dd9-7b970e63e509';
+                            name = focused ? 'homeSelected' : 'home';
                             break;
                         case 'Messages':
-                            iconSource = focused
-                                ? 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/4a0519b6-d83d-4816-83db-e3d98a0e5ba9'
-                                : 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/83441d8f-afac-451a-a2b5-d9d16cb5a3db';
+                            name = focused ? 'chatSelected' : 'chat';
                             break;
                         case 'Create New Project':
                             return (
                                 <View style={styles.addTask}>
-                                    <Image
-                                        source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e2e98082-960a-4970-bb96-0b5b27337190' }}
-                                        style={styles.addTaskImage}
-                                    />
+                                    <Icon category="tabbar" name="addProject" style={styles.addTaskImage} />
                                 </View>
                             );
                         case 'Notifications':
-                            iconSource = focused
-                                ? 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/f724cb06-2ae9-446a-bf98-5f113e10c8d9'
-                                : 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/56ce408b-e5e3-45fa-bdfa-146764e600cf';
+                            name = focused ? 'notiSelected' : 'noti';
                             break;
                         case 'Schedule':
-                            iconSource = focused
-                                ? 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/0f10e080-bb23-4141-9937-c6710a7633f9'
-                                : 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/cb345231-db03-4353-a6b5-b5e9a57c8e51';
+                            name = focused ? 'calendarSelected' : 'calendar';
                             break;
                     }
 
-                    return <Image source={{ uri: iconSource }} style={styles.tabIcon} />;
+                    return <Icon category={category} name={name} style={styles.tabIcon} />;
                 },
                 tabBarLabel: ({ focused }) =>
                     route.name === 'Create New Project' ? null : (
@@ -194,21 +179,25 @@ const TabRoot = () => {
                                 </CustomText>
                             </View>
                             <Pressable style={stylesHome.headerRight} onPress={() => router.push('../profile')}>
-                                <Image
-                                    source={
-                                        userAvatar
-                                            ? { uri: userAvatar }
-                                            : require('@/assets/images/Avatar/Ellipse 36.png')
-                                    }
-                                    style={{ width: 36, height: 36, borderRadius: 18 }}
-                                />
+                                {userAvatar ? (
+                                    <Image
+                                        source={{ uri: userAvatar }}
+                                        style={{ width: 32, height: 32, borderRadius: 16 }}
+                                    />
+                                ) : (
+                                    <Icon category="avatar" style={{ width: 32, height: 32 }} />
+                                )}
                             </Pressable>
                         </View>
                     ),
                 }}
             />
             <Tab.Screen name="Messages" component={messagesScreen} />
-            <Tab.Screen name="Create New Project" component={createNewProject} options={{ tabBarLabel: () => null, tabBarStyle: { display: 'none' } }} />
+            <Tab.Screen
+                name="Create New Project"
+                component={createNewProject}
+                options={{ tabBarLabel: () => null, tabBarStyle: { display: 'none' } }}
+            />
             <Tab.Screen name="Notifications" component={notificationScreen} />
             <Tab.Screen name="Schedule" component={scheduleScreen} />
         </Tab.Navigator>

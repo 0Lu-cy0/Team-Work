@@ -10,6 +10,7 @@ import DividerWithText from '@/components/DividerWithText';
 import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import * as Google from 'expo-auth-session/providers/google';
+import ThemeToggleButton from '@/components/ThemeToggleButton';
 
 const Login = () => {
     const router = useRouter();
@@ -26,7 +27,7 @@ const Login = () => {
 
     useEffect(() => {
         if (session) {
-            router.replace('./screens/home/(tab)');
+            router.replace('./screens/(tab)');
         }
     }, [session]);
 
@@ -39,7 +40,7 @@ const Login = () => {
         try {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
-            router.push('./screens/home/(tab)');
+            router.push('./screens/(tab)');
         } catch (error: unknown) {
             if (error instanceof Error) {
                 Alert.alert('Login Failed', error.message);
@@ -63,6 +64,7 @@ const Login = () => {
 
     return (
         <View style={stylesLogin.container}>
+            <ThemeToggleButton />
             <ResizableLogoBox />
             <CustomText style={stylesLogin.text1}>Welcome Back!</CustomText>
 

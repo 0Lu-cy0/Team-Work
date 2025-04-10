@@ -108,8 +108,8 @@ const Register = () => {
   return (
     <View style={[styleSignUp.container, { backgroundColor: colors.backgroundColor }]}>
       <ResizableLogoBox />
-      <CustomText style={[styleSignUp.text1, { color: colors.textColor }]}>Create your account</CustomText>
-      <CustomText style={[styleSignUp.text2, { color: colors.textColor }]}>Full Name</CustomText>
+      <CustomText style={[styleSignUp.text1, { color: colors.text1 }]}>Create your account</CustomText>
+      <CustomText style={[styleSignUp.text2, { color: colors.text1 }]}>Full Name</CustomText>
       <MyInputField
         value={fullName}
         onChangeText={setFullName}
@@ -124,7 +124,7 @@ const Register = () => {
         }
         style={styleSignUp.inputEmailAndPassword}
       />
-      <CustomText style={[styleSignUp.text3, { color: colors.textColor }]}>Email Address</CustomText>
+      <CustomText style={[styleSignUp.text3, { color: colors.text3 }]}>Email Address</CustomText>
       <MyInputField
         value={email}
         onChangeText={setEmail}
@@ -141,7 +141,7 @@ const Register = () => {
         }
         style={styleSignUp.inputEmailAndPassword}
       />
-      <CustomText style={[styleSignUp.text3, { color: colors.textColor }]}>Password</CustomText>
+      <CustomText style={[styleSignUp.text3, { color: colors.text3 }]}>Password</CustomText>
       <MyInputField
         value={password}
         onChangeText={setPassword}
@@ -183,16 +183,16 @@ const Register = () => {
         </TouchableOpacity>
         <View style={styleSignUp.textTermsContainer}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.textColor }]}>
+            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text3 }]}>
               I have read & agreed to DayTask{' '}
             </CustomText>
-            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.accentColor, lineHeight: 17 }]}>
+            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2, lineHeight: 17 }]}>
               Privacy Policy,
             </CustomText>
-            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.textColor }]}>
+            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2 }]}>
               {'\n'}
             </CustomText>
-            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.accentColor }]}>
+            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2 }]}>
               Terms & Condition
             </CustomText>
           </View>
@@ -200,7 +200,7 @@ const Register = () => {
       </View>
       <MyButton
         title={
-          <CustomText fontFamily="Inter" fontSize={18} style={{ color: colors.textColor }}>
+          <CustomText fontFamily="Inter" fontSize={18} style={{ color: colors.text4 }}>
             {isLoading ? 'Registering...' : 'Register'}
           </CustomText>
         }
@@ -208,14 +208,14 @@ const Register = () => {
         disabled={isRegisterDisabled}
         style={[
           styleSignUp.signUpButton,
-          { backgroundColor: colors.accentColor },
+          { backgroundColor: colors.loading },
           ...(isRegisterDisabled ? [{ opacity: 0.5 }] : []),
         ]}
       />
       <DividerWithText
         containerStyle={styleSignUp.lineSignIn_Up}
         text={
-          <CustomText fontFamily="InterMedium" fontSize={18} style={{ color: colors.secondaryTextColor }}>
+          <CustomText fontFamily="InterMedium" fontSize={18} style={{ color: colors.text3 }}>
             Or continue with
           </CustomText>
         }
@@ -230,21 +230,21 @@ const Register = () => {
               }}
               style={styleSignUp.googleIconStyle}
             />
-            <CustomText fontFamily="InterMedium" fontSize={18} style={{ color: colors.textColor }}>
+            <CustomText fontFamily="InterMedium" fontSize={18} style={{ color: colors.text5 }}>
               Google
             </CustomText>
           </View>
         }
         onPress={signUpWithGoogle}
         disabled={!request}
-        style={[styleSignUp.googleButton, { borderColor: colors.borderColor }]}
+        style={[styleSignUp.googleButton, { borderColor: colors.border }]}
       />
       <View style={styleSignUp.PageTransition}>
-        <CustomText fontFamily="InterMedium" fontSize={16} style={{ color: colors.secondaryTextColor }}>
+        <CustomText fontFamily="InterMedium" fontSize={16} style={{ color: colors.text3 }}>
           Already have an account?{' '}
         </CustomText>
         <TouchableOpacity onPress={() => router.push('/login')}>
-          <CustomText fontFamily="Inter" fontSize={18} style={{ color: colors.accentColor }}>
+          <CustomText fontFamily="Inter" fontSize={18} style={{ color: colors.text2 }}>
             Log In
           </CustomText>
         </TouchableOpacity>

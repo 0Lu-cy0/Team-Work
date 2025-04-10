@@ -8,7 +8,7 @@ const ThemeToggleButton: React.FC = () => {
 
     return (
         <TouchableOpacity
-            style={[styles.button, { backgroundColor: colors.accentColor }]}
+            style={[styles.button, { backgroundColor: colors.box1 }]}
             onPress={toggleTheme}
         >
             <Text style={[styles.buttonText, { color: theme === 'dark' ? '#ffffff' : '#333333' }]}>

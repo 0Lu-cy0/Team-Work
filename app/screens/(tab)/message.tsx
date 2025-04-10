@@ -1,7 +1,6 @@
 import Box from '@/components/Box';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-// import { styles } from '../../../styles/login';
 
 const Message = () => (
     <View style={styles.container}>

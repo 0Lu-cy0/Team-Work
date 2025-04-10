@@ -3,6 +3,7 @@ import { View, StyleSheet, Image, Text } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import CustomText from "../constants/CustomText";
 import { useThemeContext } from '../context/ThemeContext';
+import Icon from '@/components/Icon';
 export default function ResizableLogoBox() {
     const route = useRoute();
     const { colors } = useThemeContext();
@@ -39,13 +40,7 @@ export default function ResizableLogoBox() {
     return (
         <View style={[styles.box, boxStyle]}>
             {/* Ảnh */}
-            <Image
-                source={require("@/assets/images/Logo/LogoSplash.png")}
-                style={{
-                    width: imageWidth,
-                    height: imageHeight,
-                }}
-            />
+            <Icon category='logo' style={{ width: imageWidth, height: imageHeight }} />
             {/* Dòng chữ */}
             <Text
                 style={{
@@ -57,7 +52,7 @@ export default function ResizableLogoBox() {
                 }}
             >
                 <CustomText fontSize={textFontSize} >
-                    <Text style={{ color: colors.textColor, fontWeight: '600' }}>Day</Text>
+                    <Text style={{ color: colors.text1, fontWeight: '600' }}>Day</Text>
                     <Text style={{ color: '#FED36A', fontWeight: '600' }}>Task</Text>
                 </CustomText>
             </Text>

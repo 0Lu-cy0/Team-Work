@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (session) {
                 router.replace('/screens/(tab)/home');
             } else {
-                router.replace('/(auth)/login');
+                router.replace('/');
             }
         }
     }, [loading, session]);

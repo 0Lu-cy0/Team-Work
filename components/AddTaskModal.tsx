@@ -1,9 +1,17 @@
-import React from 'react';
-import { Modal, View, Image, Pressable, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, View, Image, Pressable, StyleSheet, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import CustomText from '@/constants/CustomText';
 import MyInputField from '@/components/MyInputField';
 import MyButton from '@/components/MyButton';
+import TaskMembersModal from './TaskMembersModal';
+
+interface Member {
+    user_id: string;
+    avatar: string | null;
+    name: string;
+    role?: string;
+}
 
 interface AddTaskModalProps {
     visible: boolean;
@@ -19,6 +27,9 @@ interface AddTaskModalProps {
     showTimePicker: boolean;
     onShowDatePicker: () => void;
     onShowTimePicker: () => void;
+    members: Member[];
+    selectedMembers: string[];
+    onSaveMembers: (selectedMemberIds: string[]) => void;
 }
 
 const AddTaskModal: React.FC<AddTaskModalProps> = ({
@@ -34,53 +45,68 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
     showDatePicker,
     showTimePicker,
     onShowDatePicker,
-    onShowTimePicker
+    onShowTimePicker,
+    members,
+    selectedMembers,
+    onSaveMembers,
 }) => {
+    const [membersModalVisible, setMembersModalVisible] = useState(false);
     const formatDate = (date: Date) => date.toLocaleDateString("en-GB", { day: "2-digit", month: "long" });
     const formatTime = (date: Date) => date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
     return (
-        <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
-            <View style={styles.modalBackground}>
-                <View style={styles.modalContainer}>
-                    <Pressable onPress={onClose} style={styles.closeButton}>
-                        <View style={styles.exitBox}>
-                            <CustomText style={[{ fontFamily: "Inter" }, styles.closeText]}>X</CustomText>
-                        </View>
-                    </Pressable>
-                    <CustomText fontFamily="InterSemiBold" fontSize={18} style={{ color: '#fff' }}>Task Info</CustomText>
-                    <MyInputField value={nameTask} onChangeText={setNameTask} placeholder='Enter task name...' style={styles.nameTask} />
-                    <View style={styles.dateTime}>
-                        <View style={styles.Time}>
-                            <Pressable onPress={onShowTimePicker} style={styles.timeIcon}>
-                                <Image source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/98f481d7-a3c9-43ad-bea6-4e6c9512925e" }} style={{ width: 24, height: 24 }} />
-                            </Pressable>
-                            <View style={styles.timeView}>
-                                <CustomText fontSize={20} style={{ color: "#fff" }}>
-                                    {formatTime(dueTime)}
-                                </CustomText>
+        <>
+            <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
+                <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
+                        <Pressable onPress={onClose} style={styles.closeButton}>
+                            <View style={styles.exitBox}>
+                                <CustomText style={[{ fontFamily: "Inter" }, styles.closeText]}>X</CustomText>
+                            </View>
+                        </Pressable>
+                        <CustomText fontFamily="InterSemiBold" fontSize={18} style={{ color: '#fff' }}>Task Info</CustomText>
+                        <MyInputField value={nameTask} onChangeText={setNameTask} placeholder='Enter task name...' style={styles.nameTask} />
+                        <View style={styles.dateTime}>
+                            <View style={styles.Time}>
+                                <Pressable onPress={onShowTimePicker} style={styles.timeIcon}>
+                                    <Image source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/98f481d7-a3c9-43ad-bea6-4e6c9512925e" }} style={{ width: 24, height: 24 }} />
+                                </Pressable>
+                                <View style={styles.timeView}>
+                                    <CustomText fontSize={20} style={{ color: "#fff" }}>{formatTime(dueTime)}</CustomText>
+                                </View>
+                            </View>
+                            <View style={styles.Date}>
+                                <Pressable onPress={onShowDatePicker} style={styles.dateIcon}>
+                                    <Image source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c89994dc-77ab-4dfb-a2c7-db39b0b35d73" }} style={{ width: 24, height: 24 }} />
+                                </Pressable>
+                                <View style={styles.dateView}>
+                                    <CustomText fontSize={20} style={{ color: "#fff" }}>{formatDate(dueDate)}</CustomText>
+                                </View>
                             </View>
                         </View>
-                        <View style={styles.Date}>
-                            <Pressable onPress={onShowDatePicker} style={styles.dateIcon}>
-                                <Image source={{ uri: "https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c89994dc-77ab-4dfb-a2c7-db39b0b35d73" }} style={{ width: 24, height: 24 }} />
-                            </Pressable>
-                            <View style={styles.dateView}>
-                                <CustomText fontSize={20} style={{ color: "#fff" }}>
-                                    {formatDate(dueDate)}
-                                </CustomText>
-                            </View>
-                        </View>
+                        <TouchableOpacity
+                            onPress={() => setMembersModalVisible(true)}
+                            style={styles.membersButton}
+                        >
+                            <CustomText style={styles.membersText}>
+                                {selectedMembers.length > 0
+                                    ? `${selectedMembers.length} members selected`
+                                    : 'Select members'}
+                            </CustomText>
+                        </TouchableOpacity>
+                        <MyButton onPress={handleAddTask} title={<CustomText fontSize={20}>Add</CustomText>} style={styles.Add} />
                     </View>
-                    <MyButton onPress={handleAddTask} title={<CustomText fontSize={20}>Add</CustomText>} style={styles.Add} />
                 </View>
-            </View>
-            {showTimePicker && (
-                <DateTimePicker value={dueTime} mode="time" is24Hour={true} display="default" onChange={timeOnpress} />
-            )}
-            {showDatePicker && (
-                <DateTimePicker value={dueDate} mode="date" display="default" onChange={dateOnpress} />
-            )}
-        </Modal>
+                {showTimePicker && <DateTimePicker value={dueTime} mode="time" is24Hour={true} display="default" onChange={timeOnpress} />}
+                {showDatePicker && <DateTimePicker value={dueDate} mode="date" display="default" onChange={dateOnpress} />}
+            </Modal>
+            <TaskMembersModal
+                visible={membersModalVisible}
+                onClose={() => setMembersModalVisible(false)}
+                members={members}
+                selectedMembers={selectedMembers}
+                onSave={onSaveMembers}
+            />
+        </>
     );
 };
 
@@ -90,6 +116,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    membersButton: {
+        marginTop: 20,
+        padding: 10,
+        backgroundColor: '#455A64',
+        borderRadius: 5,
+        width: 358,
+        alignItems: 'center',
+    },
+    membersText: {
+        color: '#fff',
+        fontSize: 16,
     },
     modalContainer: {
         width: '86.75%',

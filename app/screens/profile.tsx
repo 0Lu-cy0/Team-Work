@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Image, TouchableOpacity, Alert } from 'react-native';
 import { supabase } from '@/services/supabase';
+import { Database } from '@/services/database.types';
 import CustomText from '@/constants/CustomText';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import Icon from '@/components/Icon';
+import ProfileField from '@/components/ProfileField';
+import { useThemeContext } from '@/context/ThemeContext';
 
-// Định nghĩa kiểu cho user
 interface User {
     full_name: string;
     email: string;
@@ -14,11 +17,10 @@ interface User {
 
 const Profile = () => {
     const router = useRouter();
+    const { colors } = useThemeContext();
     const [user, setUser] = useState<User>({ full_name: '', email: '', avatar: null });
     const [isSettingOpen, setIsSettingOpen] = useState(false);
-    const [theme, setTheme] = useState('dark'); // Mặc định là dark
 
-    // Lấy thông tin người dùng từ Supabase
     useEffect(() => {
         const fetchUser = async () => {
             const { data: { user: authUser }, error } = await supabase.auth.getUser();
@@ -29,7 +31,7 @@ const Profile = () => {
             if (authUser) {
                 const { data, error: profileError } = await supabase
                     .from('users')
-                    .select('full_name, email, avatar')
+                    .select('full_name, email, avatar') // Xóa theme khỏi select
                     .eq('id', authUser.id)
                     .single();
 
@@ -47,7 +49,6 @@ const Profile = () => {
         fetchUser();
     }, []);
 
-    // Hàm chọn ảnh từ thư viện
     const pickImage = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
@@ -64,44 +65,30 @@ const Profile = () => {
 
         if (!pickerResult.canceled) {
             const selectedAsset = pickerResult.assets[0];
-            uploadImage(selectedAsset.uri, user.email); // Truyền email từ state
+            uploadImage(selectedAsset.uri, user.email);
         }
     };
 
-    // Hàm tải ảnh lên Supabase Storage và cập nhật bảng users
     const uploadImage = async (uri: string, email: string) => {
         try {
-            // Lấy user ID từ phiên đăng nhập
             const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
-            if (userError || !authUser) {
-                throw new Error('No user found');
-            }
+            if (userError || !authUser) throw new Error('No user found');
 
-            // Tạo tên file duy nhất cho avatar mới
             const fileName = `${email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.jpg`;
-
-            // Chuyển URI thành ArrayBuffer
             const response = await fetch(uri);
             const blob = await response.blob();
             const arrayBuffer = await new Response(blob).arrayBuffer();
 
-            // Kiểm tra và xóa avatar cũ nếu tồn tại (dùng state user.avatar)
             if (user.avatar) {
-                const oldFileName = user.avatar.split('/').pop(); // Lấy tên file từ URL
+                const oldFileName = user.avatar.split('/').pop();
                 if (oldFileName) {
                     const { error: removeError } = await supabase.storage
                         .from('teamwork')
                         .remove([oldFileName]);
-
-                    if (removeError) {
-                        console.error('Error removing old avatar:', removeError.message);
-                    } else {
-                        console.log('Old avatar removed successfully:', oldFileName);
-                    }
+                    if (removeError) console.error('Error removing old avatar:', removeError.message);
                 }
             }
 
-            // Tải ảnh mới lên bucket 'teamwork'
             const { error: uploadError } = await supabase.storage
                 .from('teamwork')
                 .upload(fileName, arrayBuffer, {
@@ -109,41 +96,33 @@ const Profile = () => {
                     upsert: true,
                 });
 
-            if (uploadError) {
-                throw uploadError;
-            }
+            if (uploadError) throw uploadError;
 
-            // Lấy URL công khai của ảnh mới
             const { data: publicUrlData } = supabase.storage
                 .from('teamwork')
                 .getPublicUrl(fileName);
 
             const publicUrl = publicUrlData.publicUrl;
 
-            // Cập nhật URL vào bảng users
+            const updateData: Partial<Database['public']['Tables']['users']['Update']> = {
+                avatar: publicUrl,
+            };
+
             const { error: updateError } = await supabase
                 .from('users')
-                .update({ avatar: publicUrl })
-                .eq('id', authUser.id); // Dùng authUser.id thay vì user.id
+                .update(updateData)
+                .eq('id', authUser.id);
 
-            if (updateError) {
-                throw updateError;
-            }
+            if (updateError) throw updateError;
 
-            // Cập nhật state để hiển thị ảnh mới
             setUser((prev) => ({ ...prev, avatar: publicUrl }));
             Alert.alert('Success', 'Avatar updated successfully!');
         } catch (error: unknown) {
-            if (error instanceof Error) {
-                console.error('Error uploading image:', error.message);
-            } else {
-                console.error('An unknown error occurred:', error);
-            }
+            console.error('Error uploading image:', error instanceof Error ? error.message : error);
             Alert.alert('Error', 'Failed to update avatar. Please try again.');
         }
     };
 
-    // Hàm đăng xuất
     const signOut = async () => {
         const { error } = await supabase.auth.signOut();
         if (error) {
@@ -153,166 +132,100 @@ const Profile = () => {
         }
     };
 
-    // Hàm chuyển đổi theme
-    const toggleTheme = () => {
-        setTheme(theme === 'dark' ? 'light' : 'dark');
+    const updateUserField = async (field: keyof User, value: string) => {
+        try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) return;
+
+            const updateData: Partial<Database['public']['Tables']['users']['Update']> = {
+                [field]: value,
+            };
+
+            const { error } = await supabase
+                .from('users')
+                .update(updateData)
+                .eq('id', authUser.id);
+
+            if (error) throw error;
+
+            setUser((prev) => ({ ...prev, [field]: value }));
+        } catch (error) {
+            console.error(`Error updating ${field}:`, error);
+            Alert.alert('Error', `Failed to update ${field}`);
+        }
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: theme === 'dark' ? '#212832' : '#FFFFFF' }]}>
-            {/* Header */}
-            <CustomText fontFamily="Montserrat" fontSize={18} style={styles.headerTitle}>
+        <View style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+            <CustomText fontFamily="Montserrat" fontSize={18} style={{ color: colors.text5 }}>
                 Profile
             </CustomText>
 
-            {/* Avatar */}
             <View style={styles.avatarContainer}>
-                <Image
-                    source={
-                        user.avatar
-                            ? { uri: user.avatar }
-                            : require('@/assets/images/Avatar/Ellipse 36.png')
-                    }
-                    style={styles.avatar}
-                />
-                <TouchableOpacity style={styles.editAvatar} onPress={pickImage}>
-                    <Image
-                        source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e2e98082-960a-4970-bb96-0b5b27337190' }}
-                        style={styles.editIcon}
-                    />
-                </TouchableOpacity>
-            </View>
-
-            {/* Thông tin người dùng */}
-            <View style={styles.infoContainer}>
-                {/* Tên người dùng */}
-                <TouchableOpacity style={styles.infoRow}>
-                    <View style={styles.infoRowLeft}>
-                        <Image
-                            source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/user-icon.png' }}
-                            style={styles.icon}
-                        />
-                        <CustomText fontFamily="InterMedium" fontSize={16} style={styles.infoText}>
-                            {user.full_name}
-                        </CustomText>
-                    </View>
-                    <Image
-                        source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/edit-icon.png' }}
-                        style={styles.editIcon}
-                    />
-                </TouchableOpacity>
-
-                {/* Email */}
-                <TouchableOpacity style={styles.infoRow}>
-                    <View style={styles.infoRowLeft}>
-                        <Image
-                            source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/email-icon.png' }}
-                            style={styles.icon}
-                        />
-                        <CustomText fontFamily="InterMedium" fontSize={16} style={styles.infoText}>
-                            {user.email}
-                        </CustomText>
-                    </View>
-                    <Image
-                        source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/edit-icon.png' }}
-                        style={styles.editIcon}
-                    />
-                </TouchableOpacity>
-
-                {/* Password */}
-                <TouchableOpacity style={styles.infoRow} onPress={() => console.log('Tính năng đang phát triển')}>
-                    <View style={styles.infoRowLeft}>
-                        <Image
-                            source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/password-icon.png' }}
-                            style={styles.icon}
-                        />
-                        <CustomText fontFamily="InterMedium" fontSize={16} style={styles.infoText}>
-                            Password
-                        </CustomText>
-                    </View>
-                    <Image
-                        source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/chevron-right.png' }}
-                        style={styles.chevron}
-                    />
-                </TouchableOpacity>
-
-                {/* My Tasks */}
-                <TouchableOpacity style={styles.infoRow} onPress={() => console.log('Tính năng đang phát triển')}>
-                    <View style={styles.infoRowLeft}>
-                        <Image
-                            source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/tasks-icon.png' }}
-                            style={styles.icon}
-                        />
-                        <CustomText fontFamily="InterMedium" fontSize={16} style={styles.infoText}>
-                            My Tasks
-                        </CustomText>
-                    </View>
-                    <Image
-                        source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/chevron-right.png' }}
-                        style={styles.chevron}
-                    />
-                </TouchableOpacity>
-
-                {/* Privacy */}
-                <TouchableOpacity style={styles.infoRow} onPress={() => console.log('Tính năng đang phát triển')}>
-                    <View style={styles.infoRowLeft}>
-                        <Image
-                            source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/privacy-icon.png' }}
-                            style={styles.icon}
-                        />
-                        <CustomText fontFamily="InterMedium" fontSize={16} style={styles.infoText}>
-                            Privacy
-                        </CustomText>
-                    </View>
-                    <Image
-                        source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/chevron-right.png' }}
-                        style={styles.chevron}
-                    />
-                </TouchableOpacity>
-
-                {/* Setting (có dropdown) */}
-                <TouchableOpacity
-                    style={styles.infoRow}
-                    onPress={() => setIsSettingOpen(!isSettingOpen)}
-                >
-                    <View style={styles.infoRowLeft}>
-                        <Image
-                            source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/setting-icon.png' }}
-                            style={styles.icon}
-                        />
-                        <CustomText fontFamily="InterMedium" fontSize={16} style={styles.infoText}>
-                            Setting
-                        </CustomText>
-                    </View>
-                    <Image
-                        source={{
-                            uri: isSettingOpen
-                                ? 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/chevron-down.png'
-                                : 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/chevron-right.png'
-                        }}
-                        style={styles.chevron}
-                    />
-                </TouchableOpacity>
-
-                {/* Dropdown cho Setting */}
-                {isSettingOpen && (
-                    <View style={styles.dropdown}>
-                        <TouchableOpacity style={styles.themeButton} onPress={toggleTheme}>
-                            <CustomText fontFamily="InterMedium" fontSize={16} style={styles.themeText}>
-                                {theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-                            </CustomText>
-                        </TouchableOpacity>
-                    </View>
+                {user.avatar ? (
+                    <Image source={{ uri: user.avatar }} style={styles.avatar} />
+                ) : (
+                    <Icon category="avatar" style={styles.avatar} />
                 )}
+                <TouchableOpacity style={[styles.editAvatar, { backgroundColor: colors.box1 }]} onPress={pickImage}>
+                    <Icon category="profile" name="avatarEditing" style={styles.editIcon} />
+                </TouchableOpacity>
             </View>
 
-            {/* Nút Logout */}
-            <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
-                <Image
-                    source={{ uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/logout-icon.png' }}
-                    style={styles.logoutIcon}
+            <View style={styles.infoContainer}>
+                <ProfileField
+                    iconCategory="profile"
+                    iconName="userName"
+                    iconRightName='edit'
+                    label="Name"
+                    value={user.full_name}
+                    onUpdate={(value) => updateUserField('full_name', value)}
                 />
-                <CustomText fontFamily="InterMedium" fontSize={16} style={styles.logoutText}>
+                <ProfileField
+                    iconCategory="profile"
+                    iconName="email"
+                    iconRightName='edit'
+                    label="Email"
+                    value={user.email}
+                    onUpdate={(value) => updateUserField('email', value)}
+                />
+                <ProfileField
+                    iconCategory="profile"
+                    iconName="password"
+                    iconRightName='edit'
+                    isPassword={true}
+                    label="Password"
+                    value="Password"
+                />
+                <ProfileField
+                    iconCategory="profile"
+                    iconName="password"
+                    iconRightName='more'
+                    label="My Tasks"
+                    value="My Tasks"
+                    canEdit={false}
+                />
+                <ProfileField
+                    iconCategory="profile"
+                    iconName="password"
+                    iconRightName='more'
+                    label="Privacy"
+                    value="Privacy"
+                    canEdit={false}
+                />
+                <ProfileField
+                    iconCategory="profile"
+                    iconName="password"
+                    iconRightName='more'
+                    label="Setting"
+                    value="Setting"
+                    canEdit={false}
+                />
+            </View>
+
+            <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.box1 }]} onPress={signOut}>
+                <Icon category="profile" name="logout" style={styles.logoutIcon} />
+                <CustomText fontFamily="InterMedium" fontSize={16} style={{ color: colors.text4 }}>
                     Logout
                 </CustomText>
             </TouchableOpacity>
@@ -324,10 +237,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         paddingTop: 50,
-    },
-    headerTitle: {
-        color: '#FFFFFF',
-        textAlign: 'center',
     },
     avatarContainer: {
         alignItems: 'center',
@@ -344,7 +253,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         right: '40%',
-        backgroundColor: '#FED36A',
         borderRadius: 15,
         padding: 5,
     },
@@ -359,7 +267,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#263238',
         padding: 15,
         borderRadius: 10,
         marginVertical: 5,
@@ -373,34 +280,14 @@ const styles = StyleSheet.create({
         height: 24,
         marginRight: 10,
     },
-    infoText: {
-        color: '#FFFFFF',
-    },
     chevron: {
         width: 20,
         height: 20,
-    },
-    dropdown: {
-        backgroundColor: '#2E3A44',
-        padding: 10,
-        borderRadius: 10,
-        marginVertical: 5,
-        marginHorizontal: 20,
-    },
-    themeButton: {
-        padding: 10,
-        backgroundColor: '#FED36A',
-        borderRadius: 5,
-        alignItems: 'center',
-    },
-    themeText: {
-        color: '#212832',
     },
     logoutButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FED36A',
         padding: 15,
         borderRadius: 10,
         margin: 20,
@@ -409,9 +296,6 @@ const styles = StyleSheet.create({
         width: 24,
         height: 24,
         marginRight: 10,
-    },
-    logoutText: {
-        color: '#212832',
     },
 });
 

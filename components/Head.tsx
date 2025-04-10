@@ -1,10 +1,18 @@
 import React from 'react';
-import { StyleSheet, View, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import Icon, { IconCategory } from './Icon'; // Giả sử Icon nằm trong file './Icon'
 
+// Cập nhật interface HeadProps để sử dụng Icon props thay vì URL
 interface HeadProps {
-    leftIconUrl?: string;
-    rightIconUrl?: string;
+    leftIcon?: {
+        category: IconCategory;
+        name?: string; // Optional, chỉ cần nếu category không phải splash/logo/avatar
+    };
+    rightIcon?: {
+        category: IconCategory;
+        name?: string; // Optional, chỉ cần nếu category không phải splash/logo/avatar
+    };
     onLeftPress?: () => void;
     onRightPress?: () => void;
     children: React.ReactNode;
@@ -12,8 +20,8 @@ interface HeadProps {
 }
 
 const Head: React.FC<HeadProps> = ({
-    leftIconUrl = 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/73bab2b3-7af2-4c18-8925-df3a35fd3758',
-    rightIconUrl = 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/aab647bb-3d80-4f84-ae50-8dfcd9de6a7b',
+    leftIcon = { category: 'topTab', name: 'back' }, // Giá trị mặc định ví dụ
+    rightIcon = { category: 'topTab', name: 'edit' }, // Giá trị mặc định ví dụ
     onLeftPress,
     onRightPress,
     children,
@@ -31,9 +39,13 @@ const Head: React.FC<HeadProps> = ({
     return (
         <View style={styles.container}>
             {/* Left Icon */}
-            {leftIconUrl && (
+            {leftIcon && (
                 <TouchableOpacity style={styles.leftIcon} onPress={handleLeftPress}>
-                    <Image source={{ uri: leftIconUrl }} style={styles.iconImage} />
+                    <Icon
+                        category={leftIcon.category}
+                        name={leftIcon.name as any} // Type assertion vì name có thể undefined
+                        style={styles.iconImage}
+                    />
                 </TouchableOpacity>
             )}
 
@@ -43,9 +55,13 @@ const Head: React.FC<HeadProps> = ({
             </View>
 
             {/* Right Icon */}
-            {showRightIcon && rightIconUrl && (
+            {showRightIcon && rightIcon && (
                 <TouchableOpacity style={styles.rightIcon} onPress={onRightPress}>
-                    <Image source={{ uri: rightIconUrl }} style={styles.iconImage} />
+                    <Icon
+                        category={rightIcon.category}
+                        name={rightIcon.name as any} // Type assertion vì name có thể undefined
+                        style={styles.iconImage}
+                    />
                 </TouchableOpacity>
             )}
         </View>

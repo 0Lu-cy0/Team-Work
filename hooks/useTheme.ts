@@ -1,4 +1,3 @@
-// hooks/useTheme.ts
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -21,27 +20,23 @@ const useTheme = (): ThemeHook => {
           setTheme(savedTheme as Theme);
         }
       } catch (error) {
-        console.error('Error loading theme:', error);
+        console.error('Error loading theme from AsyncStorage:', error);
+        // Nếu có lỗi, giữ mặc định là 'dark'
       }
     };
     loadTheme();
   }, []);
 
-  // Lưu theme vào AsyncStorage khi theme thay đổi
-  useEffect(() => {
-    const saveTheme = async () => {
-      try {
-        await AsyncStorage.setItem('theme', theme);
-      } catch (error) {
-        console.error('Error saving theme:', error);
-      }
-    };
-    saveTheme();
-  }, [theme]);
+  // Hàm toggle theme và lưu vào AsyncStorage
+  const toggleTheme = async () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
 
-  // Hàm toggle theme
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === 'dark' ? 'light' : 'dark'));
+    try {
+      await AsyncStorage.setItem('theme', newTheme);
+    } catch (error) {
+      console.error('Error saving theme to AsyncStorage:', error);
+    }
   };
 
   return { theme, toggleTheme };

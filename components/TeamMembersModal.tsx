@@ -2,12 +2,13 @@ import React from 'react';
 import { Modal, View, FlatList, Image, TouchableOpacity } from 'react-native';
 import CustomText from '@/constants/CustomText';
 import { StyleSheet } from 'react-native';
+import Icon from '@/components/Icon';
 
 interface Member {
     user_id: string;
     avatar: string | null;
     name: string;
-    role?: string; // Thay permission thành role
+    role?: string;
 }
 
 interface TeamMembersModalProps {
@@ -38,17 +39,23 @@ const TeamMembersModal: React.FC<TeamMembersModalProps> = ({ visible, onClose, m
                         keyExtractor={(item) => item.user_id}
                         renderItem={({ item }) => (
                             <View style={styles.memberRow}>
-                                <Image
-                                    source={
-                                        item.avatar
-                                            ? { uri: item.avatar }
-                                            : require('@/assets/images/Avatar/Ellipse 36.png')
-                                    }
-                                    style={styles.memberAvatar}
-                                />
+                                {/* Hiển thị avatar nếu có, nếu không thì dùng Icon mặc định */}
+                                {item.avatar ? (
+                                    <Image
+                                        source={{ uri: item.avatar }}
+                                        style={styles.memberAvatar}
+                                    />
+                                ) : (
+                                    <Icon
+                                        category="avatar"
+                                        style={{ width: 32, height: 32 }}
+                                    />
+                                )}
                                 <View style={styles.memberInfo}>
                                     <CustomText style={styles.memberName}>{item.name}</CustomText>
-                                    <CustomText style={styles.memberPermission}>{item.role || 'Member'}</CustomText>
+                                    <CustomText style={styles.memberPermission}>
+                                        {item.role || 'Member'}
+                                    </CustomText>
                                 </View>
                             </View>
                         )}
@@ -92,9 +99,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     memberAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 32, // Đảm bảo kích thước đồng nhất với Icon
+        height: 32,
+        borderRadius: 16, // Làm tròn avatar
         marginRight: 15,
     },
     memberInfo: {
