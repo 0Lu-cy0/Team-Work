@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useThemeContext } from '@/context/ThemeContext';
 
 interface ChatListItemProps {
     id: string;
@@ -17,7 +18,9 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
     timestamp,
     onPress,
 }) => {
+    const { colors } = useThemeContext();
     return (
+
         <TouchableOpacity
             style={styles.container}
             onPress={onPress}
@@ -26,20 +29,19 @@ export const ChatListItem: React.FC<ChatListItemProps> = ({
             {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatar} />
             ) : (
-                <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
+                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.box2 }]}>
+                    <Text style={[styles.avatarText, { color: colors.text5 }]}>{name.charAt(0).toUpperCase()}</Text>
                 </View>
             )}
 
             <View style={styles.content}>
                 <View style={styles.header}>
-                    <Text style={styles.name} numberOfLines={1}>{name}</Text>
+                    <Text style={[styles.name, { color: colors.text5 }]} numberOfLines={1}>{name}</Text>
                     {timestamp ? (
-                        <Text style={styles.time}>{timestamp}</Text>
+                        <Text style={[styles.time, { color: colors.text5, }]}>{timestamp}</Text>
                     ) : null}
                 </View>
-
-                <Text style={styles.message} numberOfLines={1}>
+                <Text style={[styles.message, { color: colors.text5, opacity: 0.5 }]} numberOfLines={1}>
                     {lastMessage}
                 </Text>
             </View>
@@ -51,8 +53,6 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: 'black',
     },
     avatar: {
         width: 48,
@@ -65,12 +65,10 @@ const styles = StyleSheet.create({
         height: 48,
         borderRadius: 24,
         marginRight: 12,
-        backgroundColor: '#2A3A5A',
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatarText: {
-        color: '#FFFFFF',
         fontSize: 18,
         fontWeight: 'bold',
     },
@@ -85,7 +83,6 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     name: {
-        color: '#fff',
         fontSize: 16,
         fontWeight: '600',
         flex: 1,

@@ -12,24 +12,21 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginBottom: 8,
     },
-    tab: {
+    tabChat: {
         flex: 1,
-        // paddingVertical: 12,
         alignItems: 'center',
-        // backgroundColor: '#2A3A5A',
-        // borderRadius: 8,
-        // marginHorizontal: 4,
+        paddingVertical: 16,
+        marginRight: 10,
     },
-    activeTab: {
-        backgroundColor: '#FFC107',
+    tabGroup: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 16,
+        marginLeft: 10,
     },
     tabText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#FFFFFF',
-    },
-    activeTabText: {
-        color: '#1E2A44',
     },
     emptyText: {
         color: '#A0AEC0',
@@ -38,14 +35,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     startChatContainer: {
-        padding: 16,
-        alignItems: 'center',
+        alignItems: 'flex-end',
     },
     startChatButton: {
-        backgroundColor: '#FFC107',
         paddingVertical: 12,
         paddingHorizontal: 24,
-        borderRadius: 8,
     },
     startChatButtonText: {
         fontSize: 16,

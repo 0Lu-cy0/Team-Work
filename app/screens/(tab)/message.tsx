@@ -15,6 +15,7 @@ import { isToday, formatTime, formatDate } from '@/utils/dateUtils';
 import styles from '@/styles/messages';
 import { useThemeContext } from '@/context/ThemeContext';
 import MyInputField from '@/components/MyInputField';
+import CustomText from '@/constants/CustomText';
 
 interface ChatItem {
     id: string;
@@ -232,21 +233,21 @@ export default function MessageScreen() {
             </View>
             <View style={styles.tabsContainer}>
                 <TouchableOpacity
-                    style={[styles.tab, activeTab === 'chat' && styles.activeTab]}
+                    style={[[styles.tabChat, { backgroundColor: colors.box3 }], activeTab === 'chat' && [{ backgroundColor: colors.box1 }]]}
                     onPress={() => setActiveTab('chat')}
                 >
                     <Text
-                        style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}
+                        style={[[styles.tabText, { color: colors.text5 }], activeTab === 'chat' && { color: colors.text4 }]}
                     >
                         Chat
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.tab, activeTab === 'groups' && styles.activeTab]}
+                    style={[styles.tabGroup, { backgroundColor: colors.box3 }, activeTab === 'groups' && [{ backgroundColor: colors.box1 }]]}
                     onPress={() => setActiveTab('groups')}
                 >
                     <Text
-                        style={[styles.tabText, activeTab === 'groups' && styles.activeTabText]}
+                        style={[[styles.tabText, { color: colors.text5 }], activeTab === 'groups' && { color: colors.text4 }]}
                     >
                         Groups
                     </Text>
@@ -274,10 +275,10 @@ export default function MessageScreen() {
                     ListFooterComponent={() => (
                         <View style={styles.startChatContainer}>
                             <TouchableOpacity
-                                style={styles.startChatButton}
+                                style={[styles.startChatButton, { backgroundColor: colors.box1 }]}
                                 onPress={() => router.push('/screens/chat/newMessage')}
                             >
-                                <Text style={styles.startChatButtonText}>Start chat</Text>
+                                <CustomText fontFamily='InterMedium' fontSize={16} style={{ color: colors.text4 }}> Start Chat</CustomText>
                             </TouchableOpacity>
                         </View>
                     )}
