@@ -11,10 +11,13 @@ import { supabase } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import * as Google from 'expo-auth-session/providers/google';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
+import { useThemeContext } from "@/context/ThemeContext";
+import Icon from '@/components/Icon';
 
 const Login = () => {
     const router = useRouter();
     const { session } = useAuth();
+    const { colors } = useThemeContext();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -63,36 +66,35 @@ const Login = () => {
     };
 
     return (
-        <View style={stylesLogin.container}>
-            <ThemeToggleButton />
-            <ResizableLogoBox />
-            <CustomText style={stylesLogin.text1}>Welcome Back!</CustomText>
+        <View style={[stylesLogin.container, { backgroundColor: colors.backgroundColor }]}>
 
-            <CustomText style={stylesLogin.text2}>Email Address</CustomText>
+            <View style={{ alignItems: 'center' }}>
+                <ResizableLogoBox />
+                <ThemeToggleButton />
+            </View>
+            <CustomText fontFamily='Inter' fontSize={32} style={[stylesLogin.text1, { color: colors.text5 }]}>Welcome Back!</CustomText>
+            <CustomText fontFamily='Inter' fontSize={21} style={[stylesLogin.text2, { color: colors.textNoti }]}>Email Address</CustomText>
             <MyInputField
                 value={email}
                 onChangeText={setEmail}
                 placeholder='Enter your email'
-                leftIcon={<Image source={{ uri: 'https://img.icons8.com/ios/50/email.png' }} style={{ width: 24, height: 24 }} />}
-                style={stylesLogin.inputEmailAndPassword}
+                leftIcon={<Icon category='icon_sign_up_in' name='email' style={{ width: 24, height: 24 }} />}
+                style={[stylesLogin.inputEmailAndPassword]}
             />
 
-            <CustomText style={stylesLogin.text3}>Password</CustomText>
+            <CustomText fontFamily='Inter' fontSize={21} style={[stylesLogin.text2, { color: colors.textNoti }]}>Password</CustomText>
             <MyInputField
                 value={password}
                 onChangeText={setPassword}
                 placeholder='Enter your password'
-                leftIcon={<Image source={{ uri: 'https://img.icons8.com/ios/50/lock.png' }} style={{ width: 24, height: 24 }} />}
+                leftIcon={<Icon category='icon_sign_up_in' name='password' style={{ width: 24, height: 24 }} />}
                 rightIcon={
                     <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                        <Image
-                            source={{
-                                uri: showPassword
-                                    ? 'https://img.icons8.com/ios/50/visible.png'
-                                    : 'https://img.icons8.com/ios/50/invisible.png'
-                            }}
-                            style={{ width: 24, height: 24 }}
-                        />
+                        {showPassword ? (
+                            <Icon category='icon_sign_up_in' name='showPass' style={{ width: 24, height: 24 }} />
+                        ) : (
+                            <Icon category='icon_sign_up_in' name='hiddenPass' style={{ width: 24, height: 24 }} />
+                        )}
                     </TouchableOpacity>
                 }
                 secureTextEntry={!showPassword}
@@ -100,38 +102,35 @@ const Login = () => {
             />
 
             <TouchableOpacity onPress={() => Alert.alert('Forgot Password', 'Feature coming soon!')}>
-                <CustomText style={stylesLogin.text4}>Forgot Password?</CustomText>
+                <CustomText fontFamily='Inter' fontSize={21} style={[stylesLogin.text4, { color: colors.textNoti }]}>Forgot Password?</CustomText>
             </TouchableOpacity>
 
             <MyButton
-                title={<CustomText fontSize={18}>{isLoading ? 'Logging in...' : 'Login'}</CustomText>}
+                title={<CustomText fontFamily='Inter' fontSize={22} style={{ color: colors.text4, lineHeight: 22 }}>{isLoading ? 'Logging in...' : 'Log In'}</CustomText>}
                 onPress={signInWithEmail}
                 disabled={isLoading || !email.trim() || !password.trim()}
-                style={[stylesLogin.loginButton, isLoading ? { opacity: 0.5 } : {}]}
+                style={[stylesLogin.loginButton, isLoading ? { opacity: 0.5 } : {},]}
             />
 
-            <DividerWithText text='Or continue with' containerStyle={stylesLogin.lineSignIn_Up} />
+            <DividerWithText text={<CustomText fontFamily='Inter' fontSize={21} style={{ color: colors.textNoti, lineHeight: 21 }}>Or continute with</CustomText>} containerStyle={stylesLogin.lineSignIn_Up} />
 
-            {/* <MyButton
+            <MyButton
                 backgroundColor='transparent'
                 title={
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Image
-                            source={{ uri: 'https://img.icons8.com/color/48/google-logo.png' }}
-                            style={{ width: 24, height: 24, marginRight: 8 }}
-                        />
-                        <CustomText fontSize={18} style={{ color: '#FFFFFF' }}>Google</CustomText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Icon category='icon_sign_up_in' name='google' style={{ width: 24, height: 24 }} />
+                        <CustomText fontSize={21} style={{ color: colors.text5, lineHeight: 27 }}>Google</CustomText>
                     </View>
                 }
                 onPress={signInWithGoogle}
                 disabled={!request}
-                style={stylesLogin.googleButton}
-            /> */}
+                style={[stylesLogin.googleButton, { borderColor: colors.border }]}
+            />
 
             <View style={stylesLogin.PageTransition}>
-                <CustomText fontSize={16} style={{ color: '#8CAAB9' }}>Don't have an account? </CustomText>
+                <CustomText fontSize={16} style={{ color: colors.textNoti }}>Don't have an account? </CustomText>
                 <TouchableOpacity onPress={() => router.push('./register')}>
-                    <CustomText fontSize={18} style={{ color: '#FED36A' }}>Sign Up</CustomText>
+                    <CustomText fontSize={18} style={{ color: colors.text2 }}>Sign Up</CustomText>
                 </TouchableOpacity>
             </View>
         </View>

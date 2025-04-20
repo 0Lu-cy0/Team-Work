@@ -1,3 +1,4 @@
+import { Circle } from 'react-native-svg';
 // theme.ts
 export type ThemeType = 'dark' | 'light';
 
@@ -15,9 +16,12 @@ interface ThemeColors {
     text4: string;
     text5: string;
     text6: string;
+    text7: string;
     textChat: string;
     textNoti: string;
     loading: string;
+    circle1: string;
+    circle2: string;
 }
 
 interface Themes {
@@ -40,9 +44,12 @@ const themes: Themes = {
         text4: '#000000',
         text5: '#FFFFFF',
         text6: '#212832',
+        text7: '#FFFFFF',
         textChat: '#B8B8B8',
         textNoti: '#8CAAB9',
-        loading: '#887036'
+        loading: '#887036',
+        circle1: '#FED36A',
+        circle2: '#2C4653',
     },
     light: {
         backgroundColor: '#FFE9B2', // Màu nền sáng
@@ -58,9 +65,12 @@ const themes: Themes = {
         text4: '#FFFFFF',
         text5: '#000000',
         text6: '#FFFFFF',
+        text7: '#204A5E',
         textChat: '#204A5E',
         textNoti: '#204A5E',
-        loading: '#BA8F24'
+        loading: '#BA8F24',
+        circle1: '#FBC02F',
+        circle2: '#A79B9B',
     },
 };
 

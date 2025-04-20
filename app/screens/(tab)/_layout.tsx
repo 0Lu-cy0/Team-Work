@@ -12,6 +12,7 @@ import stylesHome from '@/styles/home';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '@/services/supabase';
 import Icon from '@/components/Icon';
+import { useThemeContext } from '@/context/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 
@@ -31,26 +32,24 @@ const CustomHeaderRight = ({ routeName }: { routeName: string }) => {
     let onPressHandler = () => { };
 
     if (routeName === 'Messages') {
-        iconName = 'add';
+        iconName = 'edit';
         onPressHandler = () => router.push('../newMessage');
-    } else if (routeName === 'Schedule') {
-        iconName = 'filter';
     }
 
     return (
         <TouchableOpacity style={styles.headerRight} onPress={onPressHandler}>
-            {iconName ? <Icon category="screens" name={iconName} style={{ width: 24, height: 24 }} /> : null}
+            {iconName ? <Icon category="topTab" name={iconName} style={{ width: 24, height: 24 }} /> : null}
         </TouchableOpacity>
     );
 };
 
 const TabRoot = () => {
     const router = useRouter();
-    const [userName, setUserName] = useState(''); // State để lưu tên người dùng
-    const [userAvatar, setUserAvatar] = useState<string | null>(null); // State để lưu URL avatar
-    const [userId, setUserId] = useState<string | null>(null); // Lưu user ID để lọc real-time
+    const [userName, setUserName] = useState('');
+    const [userAvatar, setUserAvatar] = useState<string | null>(null);
+    const [userId, setUserId] = useState<string | null>(null);
+    const { colors } = useThemeContext();
 
-    // Hàm lấy thông tin người dùng từ Supabase
     const fetchUser = async () => {
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error) {
@@ -58,9 +57,9 @@ const TabRoot = () => {
             return;
         }
         if (user) {
-            setUserId(user.id); // Lưu user ID
+            setUserId(user.id);
             const { data, error: profileError } = await supabase
-                .from('users') // Đảm bảo bảng này đúng (có thể là 'profiles')
+                .from('users')
                 .select('full_name, avatar')
                 .eq('id', user.id)
                 .single();
@@ -68,17 +67,15 @@ const TabRoot = () => {
             if (profileError) {
                 console.error('Error fetching profile:', profileError.message);
             } else {
-                setUserName(data.full_name || 'User'); // Cập nhật tên
-                setUserAvatar(data.avatar || null); // Cập nhật avatar
+                setUserName(data.full_name || 'User');
+                setUserAvatar(data.avatar || null);
             }
         }
     };
 
-    // Thiết lập thông tin người dùng và real-time subscription
     useEffect(() => {
         fetchUser();
 
-        // Chỉ thiết lập subscription khi đã có userId
         if (userId) {
             const userChannel = supabase
                 .channel('users')
@@ -87,7 +84,7 @@ const TabRoot = () => {
                     { event: '*', schema: 'public', table: 'users', filter: `id=eq.${userId}` },
                     (payload) => {
                         console.log('User data changed:', payload);
-                        fetchUser(); // Cập nhật lại cả tên và avatar khi có thay đổi
+                        fetchUser();
                     }
                 )
                 .subscribe();
@@ -96,7 +93,7 @@ const TabRoot = () => {
                 supabase.removeChannel(userChannel);
             };
         }
-    }, [userId]); // Chạy lại khi userId thay đổi
+    }, [userId]);
 
     return (
         <Tab.Navigator
@@ -105,17 +102,18 @@ const TabRoot = () => {
                 headerLeft: route.name !== 'Home' ? () => <CustomHeaderLeft /> : undefined,
                 headerRight: () => <CustomHeaderRight routeName={route.name} />,
                 headerTitle: () => (
-                    <CustomText fontFamily="Montserrat" fontSize={18} style={styles.headerTitle}>
+                    <CustomText fontSize={22} style={[styles.headerTitle, { color: colors.text1 }]}>
                         {route.name}
                     </CustomText>
                 ),
                 headerTitleAlign: route.name === 'Home' ? 'left' : 'center',
                 tabBarStyle: [
                     styles.tabBar,
+                    { backgroundColor: colors.boxMenu },
                     route.name === 'Create New Project' ? { display: 'none' } : undefined,
                 ],
                 headerStyle: {
-                    backgroundColor: '#212832',
+                    backgroundColor: colors.backgroundColor,
                     elevation: 0,
                     shadowOpacity: 0,
                 },
@@ -132,7 +130,7 @@ const TabRoot = () => {
                             break;
                         case 'Create New Project':
                             return (
-                                <View style={styles.addTask}>
+                                <View style={[styles.addTask, { backgroundColor: colors.boxAdd }]}>
                                     <Icon category="tabbar" name="addProject" style={styles.addTaskImage} />
                                 </View>
                             );
@@ -167,13 +165,13 @@ const TabRoot = () => {
                             <View>
                                 <CustomText
                                     fontFamily="InterMedium"
-                                    style={stylesHome.headerText1}
+                                    style={[stylesHome.headerText1, { color: colors.text2 }]}
                                 >
                                     Welcome Back!
                                 </CustomText>
                                 <CustomText
                                     fontFamily="Montserrat"
-                                    style={stylesHome.headerText2}
+                                    style={[stylesHome.headerText2, { color: colors.text7 }]}
                                 >
                                     {userName}
                                 </CustomText>
@@ -182,10 +180,10 @@ const TabRoot = () => {
                                 {userAvatar ? (
                                     <Image
                                         source={{ uri: userAvatar }}
-                                        style={{ width: 32, height: 32, borderRadius: 16 }}
+                                        style={{ width: 47, height: 47, borderRadius: 24, marginLeft: 20 }}
                                     />
                                 ) : (
-                                    <Icon category="avatar" style={{ width: 32, height: 32 }} />
+                                    <Icon category="avatar" style={{ width: 47, height: 47 }} />
                                 )}
                             </Pressable>
                         </View>
@@ -215,10 +213,8 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         top: -12,
-        color: '#FFFFFF',
     },
     tabBar: {
-        backgroundColor: '#263238',
         height: 87,
         borderTopWidth: 0,
     },
@@ -234,7 +230,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 40,
-        backgroundColor: '#FED36A',
     },
     addTaskImage: {
         width: 24,

@@ -14,7 +14,7 @@ import { useThemeContext } from '@/context/ThemeContext';
 type ProjectRow = Database['public']['Tables']['projects']['Row'];
 type TaskRow = Database['public']['Tables']['tasks']['Row'];
 
-interface ProjectTaskTeamWithUser {
+interface ProjectTeamWithUser {
     project_id: string;
     user_id: string;
     users: { avatar: string | null };
@@ -47,6 +47,10 @@ const Home = () => {
         completed: [],
         ongoing: [],
     });
+    const [filteredProjectsData, setFilteredProjectsData] = useState<{ completed: Project[]; ongoing: Project[] }>({
+        completed: [],
+        ongoing: [],
+    });
 
     const { colors } = useThemeContext();
     const completedScrollRef = useRef<ScrollView>(null);
@@ -63,7 +67,7 @@ const Home = () => {
         console.log('[FETCH_USER_SUCCESS] Current user:', { userId: user.id });
 
         const { data: userProjects, error: userProjectsError } = await supabase
-            .from('project_task_team')
+            .from('project_team')
             .select('project_id')
             .eq('user_id', user.id);
 
@@ -75,7 +79,7 @@ const Home = () => {
             setLoading(false);
             return;
         }
-        console.log('[FETCH_USER_PROJECTS_SUCCESS] User project IDs from project_task_team:', {
+        console.log('[FETCH_USER_PROJECTS_SUCCESS] User project IDs from project_team:', {
             projectIds: userProjects.map((up) => up.project_id),
             count: userProjects.length,
         });
@@ -118,35 +122,35 @@ const Home = () => {
             tasks: tasks,
             taskCount: tasks.length,
             taskIds: tasks.map((t) => t.id),
-            projectIdsInTasks: [...new Set(tasks.map((t) => t.project_id))], // Unique project IDs in tasks
+            projectIdsInTasks: [...new Set(tasks.map((t) => t.project_id))],
         });
 
-        const { data: projectTaskTeam, error: teamError } = await supabase
-            .from('project_task_team')
+        const { data: projectTeam, error: teamError } = await supabase
+            .from('project_team')
             .select('project_id, user_id, users (avatar)')
             .in('project_id', projectIds);
 
         if (teamError) {
-            console.error('[FETCH_PROJECT_TASK_TEAM_ERROR] Failed to fetch project_task_team:', {
+            console.error('[FETCH_PROJECT_TEAM_ERROR] Failed to fetch project_team:', {
                 error: teamError.message,
                 details: teamError.details,
             });
             setLoading(false);
             return;
         }
-        console.log('[FETCH_PROJECT_TASK_TEAM_SUCCESS] Raw project_task_team data:', {
-            projectTaskTeam: projectTaskTeam,
-            entryCount: projectTaskTeam.length,
-            projectIdsInTeam: [...new Set(projectTaskTeam.map((ptt) => ptt.project_id))], // Unique project IDs
-            userIdsInTeam: [...new Set(projectTaskTeam.map((ptt) => ptt.user_id))], // Unique user IDs
+        console.log('[FETCH_PROJECT_TEAM_SUCCESS] Raw project_team data:', {
+            projectTeam: projectTeam,
+            entryCount: projectTeam.length,
+            projectIdsInTeam: [...new Set(projectTeam.map((pt) => pt.project_id))],
+            userIdsInTeam: [...new Set(projectTeam.map((pt) => pt.user_id))],
         });
 
         const projectsWithDetails = projects.map((project) => ({
             ...project,
             tasks: tasks.filter((task) => task.project_id === project.id),
-            members: projectTaskTeam
-                .filter((ptt) => ptt.project_id === project.id)
-                .map((ptt) => ({ user_id: ptt.user_id, avatar: ptt.users.avatar })),
+            members: projectTeam
+                .filter((pt) => pt.project_id === project.id)
+                .map((pt) => ({ user_id: pt.user_id, avatar: pt.users.avatar })),
         }));
 
         console.log('[PROJECTS_WITH_DETAILS] Processed projects with tasks and members:', {
@@ -167,6 +171,24 @@ const Home = () => {
         await fetchUserAndProjects();
         setRefreshing(false);
     };
+
+    // Logic tìm kiếm
+    useEffect(() => {
+        if (!search.trim()) {
+            // Nếu search rỗng, hiển thị toàn bộ dữ liệu gốc
+            setFilteredProjectsData(projectsData);
+            return;
+        }
+
+        const searchLower = search.toLowerCase();
+        const filterProjects = (projects: Project[]) =>
+            projects.filter((project) => project.title.toLowerCase().includes(searchLower));
+
+        setFilteredProjectsData({
+            completed: filterProjects(projectsData.completed),
+            ongoing: filterProjects(projectsData.ongoing),
+        });
+    }, [search, projectsData]);
 
     useEffect(() => {
         fetchUserAndProjects();
@@ -272,9 +294,60 @@ const Home = () => {
             })
             .subscribe();
 
+        const teamChannel = supabase
+            .channel('project_team')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'project_team' },
+                (payload) => {
+                    console.log('[TEAM_CHANNEL_EVENT] Received project_team event:', { eventType: payload.eventType, payload });
+                    const teamRow = payload.eventType === 'DELETE'
+                        ? (payload.old as Database['public']['Tables']['project_team']['Row'])
+                        : (payload.new as Database['public']['Tables']['project_team']['Row']);
+                    const projectId = teamRow.project_id;
+                    if (!projectId) return;
+
+                    const fetchUpdatedMembers = async (projectId: string) => {
+                        const { data: projectTeam, error } = await supabase
+                            .from('project_team')
+                            .select('project_id, user_id, users (avatar)')
+                            .eq('project_id', projectId);
+                        if (error) {
+                            console.error('[FETCH_UPDATED_MEMBERS_ERROR] Failed to fetch updated members:', { error: error.message });
+                            return [];
+                        }
+                        return projectTeam.map((pt) => ({ user_id: pt.user_id, avatar: pt.users.avatar }));
+                    };
+
+                    setProjectsData((prev) => {
+                        const updateMembers = (project: Project): Project => {
+                            if (project.id !== projectId) return project;
+                            fetchUpdatedMembers(projectId).then((updatedMembers) => {
+                                setProjectsData((current) => ({
+                                    completed: current.completed.map((p) =>
+                                        p.id === projectId ? { ...p, members: updatedMembers } : p
+                                    ),
+                                    ongoing: current.ongoing.map((p) =>
+                                        p.id === projectId ? { ...p, members: updatedMembers } : p
+                                    ),
+                                }));
+                            });
+                            return project;
+                        };
+
+                        return {
+                            completed: prev.completed.map(updateMembers),
+                            ongoing: prev.ongoing.map(updateMembers),
+                        };
+                    });
+                }
+            )
+            .subscribe();
+
         return () => {
             supabase.removeChannel(projectChannel);
             supabase.removeChannel(taskChannel);
+            supabase.removeChannel(teamChannel);
         };
     }, []);
 
@@ -322,142 +395,150 @@ const Home = () => {
                     style={styles.search}
                     value={search}
                     onChangeText={setSearch}
-                    placeholder="Tìm kiếm nhiệm vụ"
+                    placeholder="Search projects"
                     leftIcon={<Icon category="screens" name="search" />}
                 />
-                <View style={styles.setting}>
+                <View style={[styles.setting, { backgroundColor: colors.box1 }]}>
                     <Icon category="screens" name="setting" />
                 </View>
             </View>
 
             <View style={styles.completedProject}>
-                <CustomText fontFamily="Inter" style={styles.title1}>Dự Án Đã Hoàn Thành</CustomText>
-                <CustomText fontFamily="Inter" style={styles.title2}>Xem tất cả</CustomText>
+                <CustomText fontFamily="Inter" fontSize={26} style={[styles.title1, { color: colors.text7 }]}>Completed Projects</CustomText>
+                <CustomText fontFamily="Inter" fontSize={20} style={[styles.title2, { color: colors.text2 }]}>See all</CustomText>
             </View>
             {loading ? (
-                <ActivityIndicator size="large" color="#FED36A" style={{ top: 120 }} />
+                <ActivityIndicator size="large" color={colors.box1} style={{ top: 120 }} />
             ) : (
-                <ScrollView
-                    ref={completedScrollRef}
-                    horizontal
-                    style={{ flex: 1 }}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollViewContent}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FED36A" />}
-                >
-                    {projectsData.completed.map((task, index) => (
-                        <TouchableOpacity
-                            key={task.id}
-                            style={[styles.box, index > 0 && { marginLeft: 7 }]}
-                            onPress={() => handleTaskPress(task)}
-                        >
-                            <CustomText fontFamily="Inter" style={styles.titleBoxSelectedBox}>{task.title}</CustomText>
-                            <View style={styles.teamMemberConntainer}>
-                                <CustomText fontFamily="InterReguler" fontSize={13.25} style={{ color: '#212832' }}>
-                                    Thành viên nhóm
-                                </CustomText>
-                                <View style={styles.teamMember}>
-                                    {task.members.slice(0, 5).map((member) =>
-                                        member.avatar ? (
-                                            <Image
-                                                key={member.user_id}
-                                                source={{ uri: member.avatar }}
-                                                style={{ width: 32, height: 32, borderRadius: 16 }}
-                                            />
-                                        ) : (
-                                            <Icon
-                                                key={member.user_id}
-                                                category="avatar"
-                                                style={{ width: 32, height: 32 }}
-                                            />
-                                        )
-                                    )}
+                <View style={{ height: 190, width: "100%" }}>
+                    <ScrollView
+                        ref={completedScrollRef}
+                        horizontal
+                        style={{ flex: 1 }}
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.scrollViewContent}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.box1} />}
+                    >
+                        {filteredProjectsData.completed.map((task, index) => ( // Sử dụng filteredProjectsData
+                            <TouchableOpacity
+                                key={task.id}
+                                style={[styles.box, { backgroundColor: colors.box1 }, index > 0 && { marginLeft: 7 }]}
+                                onPress={() => handleTaskPress(task)}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <CustomText fontFamily="Inter" fontSize={20} style={styles.titleBoxSelectedBox}>{task.title}</CustomText>
                                 </View>
-                            </View>
-                            <View style={styles.progressBox}>
-                                <CustomText
-                                    fontFamily="InterReguler"
-                                    style={{ fontSize: 13.25, color: '#212832' }}
-                                >
-                                    Đã hoàn thành
-                                </CustomText>
-                                <CustomText fontFamily="Inter" style={{ fontSize: 13.25, color: '#212832' }}>
-                                    {calculateCompletionPercentage(task.tasks)}%
-                                </CustomText>
-                            </View>
-                            <CompletedLine
-                                progress={calculateCompletionPercentage(task.tasks)}
-                                containerStyle={{ marginTop: 10 }}
-                            />
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                                <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                                    <View style={styles.teamMemberConntainer}>
+                                        <CustomText fontFamily="InterReguler" fontSize={13.25} style={{ color: colors.text6 }}>
+                                            Team members
+                                        </CustomText>
+                                        <View style={styles.teamMember}>
+                                            {task.members.slice(0, 5).map((member) =>
+                                                member.avatar ? (
+                                                    <Image
+                                                        key={member.user_id}
+                                                        source={{ uri: member.avatar }}
+                                                        style={{ width: 20, height: 20, borderRadius: 16 }}
+                                                    />
+                                                ) : (
+                                                    <Icon
+                                                        key={member.user_id}
+                                                        category="avatar"
+                                                        style={{ width: 20, height: 20 }}
+                                                    />
+                                                )
+                                            )}
+                                        </View>
+                                    </View>
+                                    <View style={styles.progressBox}>
+                                        <CustomText
+                                            fontFamily="InterReguler"
+                                            style={{ fontSize: 13.25, color: colors.text6 }}
+                                        >
+                                            Completed
+                                        </CustomText>
+                                        <CustomText fontFamily="Inter" style={{ fontSize: 13.25, color: colors.text6 }}>
+                                            {calculateCompletionPercentage(task.tasks)}%
+                                        </CustomText>
+                                    </View>
+                                    <CompletedLine
+                                        progress={calculateCompletionPercentage(task.tasks)}
+                                    />
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
             )}
 
             <View style={styles.ongoingProject}>
-                <CustomText fontFamily="Inter" style={styles.title1}>Dự Án Đang Thực Hiện</CustomText>
-                <CustomText fontFamily="Inter" style={styles.title2}>Xem tất cả</CustomText>
+                <CustomText fontFamily="Inter" fontSize={26} style={[styles.title1, { color: colors.text7 }]}>Ongoing Project</CustomText>
+                <CustomText fontFamily="Inter" fontSize={20} style={[styles.title2, { color: colors.text2 }]}>See all</CustomText>
             </View>
             {loading ? (
-                <ActivityIndicator size="large" color="#FED36A" style={{ top: 360 }} />
+                <ActivityIndicator size="large" color={colors.box1} style={{ top: 360 }} />
             ) : (
                 <ScrollView
                     ref={ongoingScrollRef}
                     style={{ flex: 1 }}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollViewContentVertically}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FED36A" />}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.box1} />}
                 >
-                    {projectsData.ongoing.map((project, index) => (
+                    {filteredProjectsData.ongoing.map((project, index) => ( // Sử dụng filteredProjectsData
                         <TouchableOpacity
                             key={project.id}
-                            style={[styles.box1, index > 0 && { marginTop: 15 }]}
+                            style={[styles.box1, { backgroundColor: colors.box2 }, index > 0 && { marginTop: 15 }]}
                             onPress={() => handleProjectPress(project)}
                         >
-                            <CustomText fontFamily="Inter" style={styles.titleBoxUnSelected}>
+                            <CustomText fontFamily="Inter" fontSize={20} style={[styles.titleBoxUnSelected, { color: colors.text5 }]}>
                                 {project.title}
                             </CustomText>
+                            <View></View>
                             <View style={styles.box2}>
-                                <View style={styles.teamMemberProject}>
-                                    <CustomText
-                                        fontFamily="InterReguler"
-                                        style={{ fontSize: 13.25, color: '#FFFFFF' }}
-                                    >
-                                        Thành viên nhóm
-                                    </CustomText>
-                                    <View style={styles.teamMember}>
-                                        {project.members.slice(0, 5).map((member) =>
-                                            member.avatar ? (
-                                                <Image
-                                                    key={member.user_id}
-                                                    source={{ uri: member.avatar }}
-                                                    style={{ width: 32, height: 32, borderRadius: 16 }}
-                                                />
-                                            ) : (
-                                                <Icon
-                                                    key={member.user_id}
-                                                    category="avatar"
-                                                    style={{ width: 32, height: 32 }}
-                                                />
-                                            )
-                                        )}
-                                    </View>
-                                </View>
                                 <View>
-                                    <CustomText
-                                        fontFamily="Inter"
-                                        style={{ lineHeight: 25, width: 113, fontSize: 13.25, color: '#FFFFFF' }}
-                                    >
-                                        Hạn chót:{' '}
-                                        {new Date(project.due_date).toLocaleDateString('en-GB', {
-                                            day: '2-digit',
-                                            month: 'long',
-                                        })}
-                                    </CustomText>
+                                    <View style={styles.teamMemberProject}>
+                                        <CustomText
+                                            fontFamily="InterReguler"
+                                            style={{ fontSize: 13.25, color: colors.text5 }}
+                                        >
+                                            Team members
+                                        </CustomText>
+                                        <View style={styles.teamMember}>
+                                            {project.members.slice(0, 5).map((member) =>
+                                                member.avatar ? (
+                                                    <Image
+                                                        key={member.user_id}
+                                                        source={{ uri: member.avatar }}
+                                                        style={{ width: 20, height: 20, borderRadius: 16 }}
+                                                    />
+                                                ) : (
+                                                    <Icon
+                                                        key={member.user_id}
+                                                        category="avatar"
+                                                        style={{ width: 20, height: 20 }}
+                                                    />
+                                                )
+                                            )}
+                                        </View>
+                                    </View>
+                                    <View style={{ marginTop: 10, flex: 1 }}>
+                                        <CustomText
+                                            fontFamily="Inter"
+                                            style={{ lineHeight: 25, width: 113, fontSize: 13.25, color: colors.text5 }}
+                                        >
+                                            Due on : {' '}
+                                            {new Date(project.due_date).toLocaleDateString('en-GB', {
+                                                day: '2-digit',
+                                                month: 'long',
+                                            })}
+                                        </CustomText>
+                                    </View>
                                 </View>
                                 <CompletedCircle
                                     progress={calculateCompletionPercentage(project.tasks)}
-                                    containerStyle={styles.completed}
+                                    containerStyle={{ marginRight: 20 }}
                                 />
                             </View>
                         </TouchableOpacity>

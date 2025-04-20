@@ -8,25 +8,22 @@ const styles = StyleSheet.create({
         paddingHorizontal: 22,
     },
     containerHeader: {
-        position: 'absolute',
-        width: 300,
+        width: "100%",
         top: 0,
         left: 5,
         justifyContent: 'space-between',
         flexDirection: 'row',
     },
     headerText1: {
-        fontSize: 12.7,
-        color: '#FED36A',
+        fontSize: 14,
         left: 0,
     },
     headerText2: {
         transform: [
-            { scaleX: 1.31 },     // Kéo dài theo chiều ngang
-            { translateX: 12.5 }   // Dịch lại vị trí ban đầu
+            { scaleX: 2.6 },
+            { translateX: 27 }
         ],
         fontSize: 22.29,
-        color: 'white',
     },
     headerRight: {
         width: 48,
@@ -40,13 +37,13 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     search: {
-        width: 311,
-        height: '100%'
+        height: '100%',
+        flex: 7,
     },
     setting: {
-        width: 58,
+        flex: 1.4,
+        marginLeft: 16,
         height: "100%",
-        backgroundColor: '#FED36A',
         justifyContent: 'center',
         alignItems: 'center'
     },
@@ -61,7 +58,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     ongoingProject: {
-        marginTop: -134,
+        marginTop: 40,
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
@@ -97,7 +94,6 @@ const styles = StyleSheet.create({
         flex: 1,
         width: 183,
         height: 175,
-        backgroundColor: '#FED36A',
         paddingHorizontal: 10,
         paddingVertical: 10,
         justifyContent: 'space-between',
@@ -106,7 +102,7 @@ const styles = StyleSheet.create({
     titleBoxSelectedBox: {
         transform: [
             { scaleX: 1.63 },     // Kéo dài theo chiều ngang
-            { translateX: 27.5 }   // Dịch lại vị trí ban đầu
+            { translateX: 31.6 }   // Dịch lại vị trí ban đầu
         ],
         fontSize: 21,
         color: '#000000',
@@ -114,7 +110,7 @@ const styles = StyleSheet.create({
     titleBoxUnSelected: {
         transform: [
             { scaleX: 1.59 },     // Kéo dài theo chiều ngang
-            { translateX: 60.6 }   // Dịch lại vị trí ban đầu
+            { translateX: 68 }   // Dịch lại vị trí ban đầu
         ],
         fontSize: 21,
         color: '#FFFFFF',
@@ -124,83 +120,36 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     teamMember: {
-        width: 71,
-        height: 20,
         marginLeft: 10,
-        flexDirection: 'row' as const,
+        flexDirection: 'row',
         alignItems: 'center',
     },
-    circle1: {
-        width: 20, // Kích thước đường kính hình tròn
-        height: 20,
-        borderRadius: 50, // Biến hình vuông thành hình tròn
-        backgroundColor: 'blue',
-    },
-    circle2: {
-        position: 'absolute',
-        width: 20, // Kích thước đường kính hình tròn
-        height: 20,
-        borderRadius: 50,
-        backgroundColor: 'green',
-        marginLeft: 13,
-    },
-    circle3: {
-        position: 'absolute',
-        width: 20, // Kích thước đường kính hình tròn
-        height: 20,
-        borderRadius: 50,
-        backgroundColor: 'yellow',
-        marginLeft: 26,
-    },
-    circle4: {
-        position: 'absolute',
-        width: 20, // Kích thước đường kính hình tròn
-        height: 20,
-        borderRadius: 50,
-        backgroundColor: 'white',
-        marginLeft: 39,
-    },
-    circle5: {
-        position: 'absolute',
-        width: 20, // Kích thước đường kính hình tròn
-        height: 20,
-        borderRadius: 50,
-        backgroundColor: 'green',
-        marginLeft: 52,
-    },
     progressBox: {
-        width: 164,
+        width: "100%",
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
     scrollViewContentVertically: {
         marginTop: 16,
-        paddingBottom: 20, // Để tạo không gian dưới cùng
+        paddingBottom: 20,
     },
     box1: {
         width: 384,
         height: 125,
-        backgroundColor: '#455A64',
-        paddingTop: 10,
-        paddingRight: 10,
-        paddingBottom: 10,
-        paddingLeft: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
         justifyContent: 'space-between',
     },
     box2: {
-        height: 67,
+        marginTop: 4,
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
     },
     teamMemberProject: {
         height: 45,
-        width: 84,
-        justifyContent: 'space-between'
-    },
-    completed: {
-        position: 'absolute',
-        left: 303,
-        top: 5,
-        alignItems: 'center',
-        justifyContent: 'center',
+        width: '100%',
+        justifyContent: 'space-between',
     },
     memberAvatar: {
         width: 24,

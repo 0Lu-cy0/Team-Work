@@ -12,6 +12,7 @@ import CustomText from '@/constants/CustomText';
 import MyInputField from '@/components/MyInputField';
 import MyButton from '@/components/MyButton';
 import DividerWithText from '@/components/DividerWithText';
+import Icon from '@/components/Icon';
 
 const Register = () => {
   const [email, setEmail] = useState<string>('');
@@ -107,101 +108,70 @@ const Register = () => {
 
   return (
     <View style={[styleSignUp.container, { backgroundColor: colors.backgroundColor }]}>
-      <ResizableLogoBox />
-      <CustomText style={[styleSignUp.text1, { color: colors.text1 }]}>Create your account</CustomText>
-      <CustomText style={[styleSignUp.text2, { color: colors.text1 }]}>Full Name</CustomText>
+      <View style={{ alignItems: 'center' }}>
+        <ResizableLogoBox />
+      </View>
+      <CustomText fontFamily='Inter' fontSize={32} style={[styleSignUp.text1, { color: colors.text5 }]}>Create your account</CustomText>
+      <CustomText fontFamily='Inter' fontSize={21} style={[styleSignUp.text2, { color: colors.textNoti }]}>Full Name</CustomText>
       <MyInputField
         value={fullName}
         onChangeText={setFullName}
-        placeholder="Enter your full name"
-        leftIcon={
-          <Image
-            source={{
-              uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/3caff157-2efa-4052-95fd-f178e49fd5c9',
-            }}
-            style={{ width: 24, height: 24 }}
-          />
-        }
-        style={styleSignUp.inputEmailAndPassword}
+        placeholder='Enter your full name'
+        leftIcon={<Icon category='icon_sign_up_in' name='user' style={{ width: 24, height: 24 }} />}
+        style={[styleSignUp.inputEmailAndPassword]}
       />
-      <CustomText style={[styleSignUp.text3, { color: colors.text3 }]}>Email Address</CustomText>
+      <CustomText fontFamily='Inter' fontSize={21} style={[styleSignUp.text2, { color: colors.textNoti }]}>Email</CustomText>
       <MyInputField
         value={email}
         onChangeText={setEmail}
-        placeholder="Enter your email"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        leftIcon={
-          <Image
-            source={{
-              uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/01c3956b-50b9-4793-819f-54b0e1af8a2a',
-            }}
-            style={{ width: 24, height: 24 }}
-          />
-        }
-        style={styleSignUp.inputEmailAndPassword}
+        placeholder='Enter your email'
+        leftIcon={<Icon category='icon_sign_up_in' name='email' style={{ width: 24, height: 24 }} />}
+        style={[styleSignUp.inputEmailAndPassword]}
       />
-      <CustomText style={[styleSignUp.text3, { color: colors.text3 }]}>Password</CustomText>
+      <CustomText fontFamily='Inter' fontSize={21} style={[styleSignUp.text2, { color: colors.textNoti }]}>Password</CustomText>
       <MyInputField
         value={password}
         onChangeText={setPassword}
-        placeholder="Enter your password"
-        secureTextEntry={!showPassword}
-        autoCapitalize="none"
-        leftIcon={
-          <Image
-            source={{
-              uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/484553ed-cffc-478e-8665-5a9353dafde4',
-            }}
-            style={{ width: 24, height: 24 }}
-          />
-        }
+        placeholder='Enter your password'
+        leftIcon={<Icon category='icon_sign_up_in' name='password' style={{ width: 24, height: 24 }} />}
         rightIcon={
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Image
-              source={{
-                uri: showPassword
-                  ? 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/dc42c0ed-eae3-440a-8b19-f9b5842a5869'
-                  : 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/e8912b8a-d4c8-456b-90fd-f8ebae2af43d',
-              }}
-              style={{ width: 24, height: 24 }}
-            />
+            {showPassword ? (
+              <Icon category='icon_sign_up_in' name='showPass' style={{ width: 24, height: 24 }} />
+            ) : (
+              <Icon category='icon_sign_up_in' name='hiddenPass' style={{ width: 24, height: 24 }} />
+            )}
           </TouchableOpacity>
         }
+        secureTextEntry={!showPassword}
         style={styleSignUp.inputEmailAndPassword}
       />
       <View style={styleSignUp.termsContainer}>
         <TouchableOpacity onPress={() => setIsChecked(!isChecked)}>
-          <Image
-            source={{
-              uri: isChecked
-                ? 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/6f39f8db-578b-4436-ae45-5103af475330'
-                : 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/eb5662b6-1b13-4050-9be8-be99b6ef85cb',
-            }}
-            style={{ width: 24, height: 24 }}
-          />
+          {isChecked ? (
+            <Icon category='icon_sign_up_in' name='checked' style={{ width: 24, height: 24 }} />
+          ) : (
+            <Icon category='icon_sign_up_in' name='unChecked' style={{ width: 24, height: 24 }} />)}
         </TouchableOpacity>
-        <View style={styleSignUp.textTermsContainer}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text3 }]}>
-              I have read & agreed to DayTask{' '}
-            </CustomText>
-            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2, lineHeight: 17 }]}>
-              Privacy Policy,
-            </CustomText>
-            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2 }]}>
-              {'\n'}
-            </CustomText>
-            <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2 }]}>
-              Terms & Condition
-            </CustomText>
-          </View>
+        <View style={[styleSignUp.textTermsContainer, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+          <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.textNoti }]}>
+            I have read & agreed to DayTask{' '}
+          </CustomText>
+          <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2, lineHeight: 17 }]}>
+            Privacy Policy,
+          </CustomText>
+          <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2 }]}>
+            {'\n'}
+          </CustomText>
+          <CustomText fontFamily="Inter" style={[styleSignUp.text7, { color: colors.text2 }]}>
+            Terms & Condition
+          </CustomText>
         </View>
       </View>
       <MyButton
         title={
           <CustomText fontFamily="Inter" fontSize={18} style={{ color: colors.text4 }}>
-            {isLoading ? 'Registering...' : 'Register'}
+            {isLoading ? 'Signing up...' : 'Sign Up'}
           </CustomText>
         }
         onPress={signUpWithEmail}
@@ -221,18 +191,11 @@ const Register = () => {
         }
       />
       <MyButton
-        backgroundColor="transparent"
+        backgroundColor='transparent'
         title={
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Image
-              source={{
-                uri: 'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/af3d1608-6525-47dc-9f96-1c952c827e7b',
-              }}
-              style={styleSignUp.googleIconStyle}
-            />
-            <CustomText fontFamily="InterMedium" fontSize={18} style={{ color: colors.text5 }}>
-              Google
-            </CustomText>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Icon category='icon_sign_up_in' name='google' style={{ width: 24, height: 24 }} />
+            <CustomText fontSize={21} style={{ color: colors.text5, lineHeight: 27 }}>Google</CustomText>
           </View>
         }
         onPress={signUpWithGoogle}
@@ -244,7 +207,7 @@ const Register = () => {
           Already have an account?{' '}
         </CustomText>
         <TouchableOpacity onPress={() => router.push('/login')}>
-          <CustomText fontFamily="Inter" fontSize={18} style={{ color: colors.text2 }}>
+          <CustomText fontFamily="Inter" fontSize={18} style={{ color: colors.text2, lineHeight: 25 }}>
             Log In
           </CustomText>
         </TouchableOpacity>

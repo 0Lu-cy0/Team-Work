@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import Icon from '@/components/Icon';
 import ProfileField from '@/components/ProfileField';
 import { useThemeContext } from '@/context/ThemeContext';
+import ThemeToggleButton from '@/components/ThemeToggleButton';
 
 interface User {
     full_name: string;
@@ -157,6 +158,7 @@ const Profile = () => {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+            <ThemeToggleButton />
             <CustomText fontFamily="Montserrat" fontSize={18} style={{ color: colors.text5 }}>
                 Profile
             </CustomText>

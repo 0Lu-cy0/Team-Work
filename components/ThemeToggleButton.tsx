@@ -11,8 +11,8 @@ const ThemeToggleButton: React.FC = () => {
             style={[styles.button, { backgroundColor: colors.box1 }]}
             onPress={toggleTheme}
         >
-            <Text style={[styles.buttonText, { color: theme === 'dark' ? '#ffffff' : '#333333' }]}>
-                {theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}
+            <Text style={[styles.buttonText, { color: colors.text4 }]}>
+                {theme === 'dark' ? 'Light' : 'Dark'}
             </Text>
         </TouchableOpacity>
     );
@@ -21,11 +21,9 @@ const ThemeToggleButton: React.FC = () => {
 const styles = StyleSheet.create({
     button: {
         position: 'absolute',
-        top: 40,
-        right: 20,
+        right: 10,
         paddingVertical: 8,
         paddingHorizontal: 16,
-        borderRadius: 8,
     },
     buttonText: {
         fontSize: 16,

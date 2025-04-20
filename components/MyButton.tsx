@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet, ViewStyle, TextStyle, View, Text } from 'react-native';
+import { useThemeContext } from '@/context/ThemeContext';
 
 interface MyButtonProps {
     title?: JSX.Element | string;
@@ -15,8 +16,9 @@ const MyButton: React.FC<MyButtonProps> = ({
     onPress,
     style,
     textStyle,
-    backgroundColor = "#FED36A",
+    backgroundColor,
 }) => {
+    const { colors } = useThemeContext();
     return (
         <TouchableOpacity
             activeOpacity={0.6}
@@ -24,7 +26,7 @@ const MyButton: React.FC<MyButtonProps> = ({
             style={[
                 styles.button,
                 style,
-                { backgroundColor },
+                { backgroundColor: backgroundColor || colors.box1 },
             ]}
         >
             <View style={styles.content}>
@@ -40,6 +42,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         paddingVertical: 10,
         paddingHorizontal: 15,
+        width: '100%',
     },
     content: {
         flexDirection: "row",

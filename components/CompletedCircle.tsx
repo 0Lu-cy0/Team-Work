@@ -2,15 +2,13 @@ import React from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import CustomText from '@/constants/CustomText'; // Import CustomText
+import { useThemeContext } from '@/context/ThemeContext';
 
 interface CompletedCircleProps {
     radius?: number; // Bán kính hình tròn (mặc định 24)
     strokeWidth?: number; // Độ dày đường viền (mặc định 2)
     progress: number; // % hoàn thành
     size?: number; // Kích thước tổng của SVG (mặc định 59)
-    baseColor?: string; // Màu nền vòng tròn (mặc định '#e6e6e6')
-    progressColor?: string; // Màu vòng cung (mặc định '#FED36A')
-    textColor?: string; // Màu chữ hiển thị % (mặc định '#FED36A')
     containerStyle?: ViewStyle; // Style tùy chỉnh cho container bên ngoài
 }
 
@@ -19,14 +17,12 @@ const CompletedCircle: React.FC<CompletedCircleProps> = ({
     strokeWidth = 2,
     progress,
     size = 59,
-    baseColor = '#2C4653',
-    progressColor = '#FED36A',
-    textColor = '#FED36A',
     containerStyle,
 }) => {
     const circumference = 2 * Math.PI * radius; // Chu vi hình tròn
     const offset = circumference - (progress / 100) * circumference; // Tính toán độ lệch của vòng cung
     const rotationAngle = progress; // Tính toán góc xoay dựa trên phần trăm hoàn thành
+    const { colors } = useThemeContext();
 
     return (
         <View style={[{ width: size, height: size }, containerStyle]}>
@@ -36,7 +32,7 @@ const CompletedCircle: React.FC<CompletedCircleProps> = ({
                     cx={size / 2}
                     cy={size / 2}
                     r={radius}
-                    stroke={baseColor}
+                    stroke={colors.circle2}
                     strokeWidth={strokeWidth}
                     fill="none"
                 />
@@ -45,7 +41,7 @@ const CompletedCircle: React.FC<CompletedCircleProps> = ({
                     cx={size / 2}
                     cy={size / 2}
                     r={radius}
-                    stroke={progressColor}
+                    stroke={colors.circle1}
                     strokeWidth={strokeWidth}
                     fill="none"
                     strokeDasharray={circumference}
@@ -60,8 +56,11 @@ const CompletedCircle: React.FC<CompletedCircleProps> = ({
                 fontFamily="Inter"
                 fontSize={radius * 0.4}
                 style={{
-                    color: textColor,
+                    color: colors.text5,
                     position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: [{ translateX: -radius * 0.4 }, { translateY: -radius * 0.3 }],
                 }}
             >
                 {`${progress}%`}

@@ -16,9 +16,16 @@ import MyButton from '@/components/MyButton';
 import { supabase } from '@/services/supabase';
 import { Database } from '@/services/database.types';
 import styles from '@/styles/projectInformation';
+import Head from '@/components/Head';
+import { useThemeContext } from '@/context/ThemeContext';
+import MyInputField from '@/components/MyInputField';
+import Icon from '@/components/Icon';
+import AddTeamMemberModal from '@/components/AddTeamMemberModal';
+import TeamMembersList from '@/components/TeamMembersList'; // Import mới
 
 type UserRow = Database['public']['Tables']['users']['Row'];
 type ProjectRow = Database['public']['Tables']['projects']['Row'];
+type ProjectTeamInsert = Database['public']['Tables']['project_team']['Insert'];
 
 interface TeamMember {
     id: string;
@@ -51,11 +58,13 @@ const ProjectInformation = () => {
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [canEdit, setCanEdit] = useState<boolean>(false);
+    const { colors } = useThemeContext();
 
     useEffect(() => {
         const fetchProjectAndUsers = async () => {
             try {
                 if (!projectId) {
+                    console.error('[FETCH_PROJECT_ERROR] No projectId provided');
                     alert('Không tìm thấy dự án. Vui lòng thử lại.');
                     router.back();
                     return;
@@ -63,6 +72,7 @@ const ProjectInformation = () => {
 
                 const { data: { user }, error: userError } = await supabase.auth.getUser();
                 if (userError || !user || !user.id) {
+                    console.error('[FETCH_USER_ERROR] Cannot authenticate user:', userError?.message);
                     throw new Error('Không thể xác thực người dùng');
                 }
                 setCurrentUserId(user.id);
@@ -75,6 +85,7 @@ const ProjectInformation = () => {
                     .returns<ProjectRow>();
 
                 if (projectError) {
+                    console.error('[FETCH_PROJECT_ERROR] Cannot load project:', projectError.message);
                     throw new Error('Không thể tải thông tin dự án');
                 }
 
@@ -82,19 +93,26 @@ const ProjectInformation = () => {
                 setDescription(project.description || initialDescription || '');
                 setDueDate(new Date(project.due_date || initialDueDate));
                 setPermission(project.permission ?? initialPermission);
-                console.log('[PERMISSION_SET] Initial permission set', {
+
+                console.log('[PROJECT_DATA_SET]', {
+                    projectId,
+                    title: project.title || initialTitle,
+                    description: project.description || initialDescription,
+                    dueDate: project.due_date || initialDueDate,
                     permission: project.permission ?? initialPermission,
-                    projectId
                 });
 
                 const { data: teamData, error: teamError } = await supabase
-                    .from('project_task_team')
+                    .from('project_team')
                     .select('user_id, users (id, full_name, avatar), role')
                     .eq('project_id', projectId);
 
                 if (teamError) {
+                    console.error('[FETCH_TEAM_ERROR] Cannot load team members:', teamError.message);
                     throw new Error('Không thể tải danh sách thành viên');
                 }
+
+                console.log('[TEAM_DATA_RAW]', { projectId, teamData });
 
                 const uniqueMembers = Array.from(
                     new Map(
@@ -111,8 +129,13 @@ const ProjectInformation = () => {
                 );
                 setTeamMembers(uniqueMembers);
 
+                console.log('[PROJECT_DATA_SET]', {
+                    projectId,
+                    teamMembers: uniqueMembers,
+                });
+
                 const currentUserRole = uniqueMembers.find(member => member.id === user.id)?.role;
-                setCanEdit(currentUserRole === 'lead');
+                setCanEdit(currentUserRole === 'leader');
 
                 const { data: users, error: usersError } = await supabase
                     .from('users')
@@ -120,18 +143,19 @@ const ProjectInformation = () => {
                     .returns<UserRow[]>();
 
                 if (usersError) {
+                    console.error('[FETCH_USERS_ERROR] Cannot load users:', usersError.message);
                     throw new Error('Không thể tải danh sách người dùng');
                 }
                 setAvailableUsers(users || []);
 
             } catch (error: any) {
+                console.error('[FETCH_PROJECT_FAILED]', error.message);
                 alert('Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại.');
             }
         };
 
         fetchProjectAndUsers();
 
-        // Lắng nghe thay đổi real-time từ bảng projects
         const projectChannel = supabase
             .channel(`projects-${projectId}`)
             .on(
@@ -143,30 +167,34 @@ const ProjectInformation = () => {
                     setDescription(updatedProject.description || '');
                     setDueDate(new Date(updatedProject.due_date));
                     setPermission(updatedProject.permission ?? false);
-                    console.log('[PERMISSION_UPDATED] Real-time project update', {
+                    console.log('[PROJECT_UPDATED] Real-time project update', {
                         projectId,
-                        newPermission: updatedProject.permission
+                        title: updatedProject.title,
+                        description: updatedProject.description,
+                        dueDate: updatedProject.due_date,
+                        permission: updatedProject.permission
                     });
                 }
             )
             .subscribe();
 
-        // Lắng nghe thay đổi real-time từ bảng project_task_team
         const teamChannel = supabase
-            .channel(`project_task_team-${projectId}`)
+            .channel(`project_team-${projectId}`)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'project_task_team', filter: `project_id=eq.${projectId}` },
+                { event: '*', schema: 'public', table: 'project_team', filter: `project_id=eq.${projectId}` },
                 async (payload) => {
                     const { data: teamData, error: teamError } = await supabase
-                        .from('project_task_team')
+                        .from('project_team')
                         .select('user_id, users (id, full_name, avatar), role')
                         .eq('project_id', projectId);
 
                     if (teamError) {
-                        console.error('Error fetching updated team data:', teamError);
+                        console.error('[FETCH_TEAM_UPDATE_ERROR] Error fetching updated team data:', teamError.message);
                         return;
                     }
+
+                    console.log('[TEAM_UPDATE_RAW]', { projectId, teamData });
 
                     const uniqueMembers = Array.from(
                         new Map(
@@ -184,17 +212,38 @@ const ProjectInformation = () => {
                     setTeamMembers(uniqueMembers);
 
                     const currentUserRole = uniqueMembers.find(member => member.id === currentUserId)?.role;
-                    setCanEdit(currentUserRole === 'lead');
+                    setCanEdit(currentUserRole === 'leader');
+
+                    console.log('[TEAM_UPDATED] Real-time team update', {
+                        projectId,
+                        teamMembers: uniqueMembers,
+                        canEdit: currentUserRole === 'leader'
+                    });
                 }
             )
             .subscribe();
-
-        // Hủy đăng ký khi component unmount
         return () => {
             supabase.removeChannel(projectChannel);
             supabase.removeChannel(teamChannel);
         };
     }, [projectId, initialTitle, initialDescription, initialDueDate, initialPermission, currentUserId]);
+
+    const logger = {
+        error: (message: string, error: any, context?: any) => {
+            console.error(`[TaskDetails] ${message}`, {
+                error: error?.message || error,
+                stack: error?.stack,
+                context,
+                timestamp: new Date().toISOString(),
+            });
+        },
+        warn: (message: string, context?: any) => {
+            console.warn(`[TaskDetails] ${message}`, {
+                context,
+                timestamp: new Date().toISOString(),
+            });
+        },
+    };
 
     const onChangeDate = (event: any, selectedDate?: Date) => {
         if (!canEdit) return;
@@ -217,17 +266,25 @@ const ProjectInformation = () => {
         }
     };
 
-    const handleAddMember = (user: UserRow) => {
+    const handleRemoveMember = async (memberId: string) => {
         if (!canEdit) return;
-        if (!teamMembers.find((member) => member.id === user.id)) {
-            setTeamMembers([...teamMembers, { id: user.id, full_name: user.full_name || 'Không rõ', avatar: user.avatar }]);
-        }
-        setShowAddMemberModal(false);
-    };
+        try {
+            const { error } = await supabase
+                .from('project_team')
+                .delete()
+                .eq('project_id', projectId)
+                .eq('user_id', memberId);
 
-    const handleRemoveMember = (memberId: string) => {
-        if (!canEdit) return;
-        setTeamMembers(teamMembers.filter((member) => member.id !== memberId));
+            if (error) {
+                console.error('[REMOVE_MEMBER_ERROR] Cannot remove member:', error.message);
+                throw new Error('Không thể xóa thành viên');
+            }
+
+            setTeamMembers(teamMembers.filter((member) => member.id !== memberId));
+        } catch (error: any) {
+            console.error('[REMOVE_MEMBER_FAILED]', error.message);
+            alert('Không thể xóa thành viên. Vui lòng thử lại.');
+        }
     };
 
     const handleUpdateProject = async () => {
@@ -249,53 +306,64 @@ const ProjectInformation = () => {
                 .eq('id', projectId);
 
             if (projectError) {
-                throw projectError;
+                console.error('[UPDATE_PROJECT_ERROR] Cannot update project:', projectError.message);
+                throw new Error('Không thể cập nhật dự án');
             }
-            console.log('[PERMISSION_UPDATED] Project permission updated in database', {
-                projectId,
-                newPermission: permission
-            });
 
-            const { data: tasks, error: taskError } = await supabase
-                .from('tasks')
-                .select('id')
+            const { data: currentTeamData, error: fetchError } = await supabase
+                .from('project_team')
+                .select('user_id, role')
                 .eq('project_id', projectId);
 
-            if (taskError || !tasks || tasks.length === 0) {
-                throw taskError || new Error('Không tìm thấy task nào');
-            }
-            const taskIds = tasks.map(task => task.id);
-
-            const { error: deleteTeamError } = await supabase
-                .from('project_task_team')
-                .delete()
-                .eq('project_id', projectId);
-
-            if (deleteTeamError) {
-                throw deleteTeamError;
+            if (fetchError) {
+                console.error('[FETCH_CURRENT_TEAM_ERROR] Cannot fetch current team:', fetchError.message);
+                throw new Error('Không thể lấy danh sách thành viên hiện tại');
             }
 
-            const teamEntries = taskIds.flatMap(taskId => [
-                { project_id: projectId, task_id: taskId, user_id: currentUserId!, role: 'lead' },
-                ...teamMembers.map((member) => ({
+            const desiredTeam: ProjectTeamInsert[] = [
+                { project_id: projectId, user_id: currentUserId!, role: 'leader' },
+                ...teamMembers.map(member => ({
                     project_id: projectId,
-                    task_id: taskId,
                     user_id: member.id,
-                    role: 'member',
+                    role: member.role || 'member',
                 })),
-            ]);
+            ];
 
-            const { error: teamError } = await supabase
-                .from('project_task_team')
-                .insert(teamEntries);
+            const currentTeamMap = new Map(currentTeamData.map(entry => [entry.user_id, entry]));
+            const desiredTeamMap = new Map(desiredTeam.map(entry => [entry.user_id, entry]));
 
-            if (teamError) {
-                throw teamError;
+            const toDelete = currentTeamData.filter(entry => !desiredTeamMap.has(entry.user_id));
+            if (toDelete.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from('project_team')
+                    .delete()
+                    .in('user_id', toDelete.map(d => d.user_id))
+                    .eq('project_id', projectId);
+                if (deleteError) {
+                    console.error('[DELETE_TEAM_ERROR] Cannot delete team members:', deleteError.message);
+                    throw new Error('Không thể xóa thành viên');
+                }
             }
 
+            const toUpsert: ProjectTeamInsert[] = desiredTeam.filter(entry => {
+                const current = currentTeamMap.get(entry.user_id);
+                return !current || current.role !== entry.role;
+            });
+            if (toUpsert.length > 0) {
+                const { error: upsertError } = await supabase
+                    .from('project_team')
+                    .upsert(toUpsert, { onConflict: 'project_id,user_id' });
+                if (upsertError) {
+                    console.error('[UPSERT_TEAM_ERROR] Cannot upsert team members:', upsertError.message);
+                    throw new Error('Không thể thêm/cập nhật thành viên');
+                }
+            }
+
+            console.log('[UPDATE_PROJECT_SUCCESS]', { projectId, title, description, dueDate: dueDate.toISOString(), teamMembers });
             router.back();
 
         } catch (error: any) {
+            console.error('[UPDATE_PROJECT_FAILED]', error.message);
             alert('Không thể cập nhật dự án. Vui lòng thử lại.');
         }
     };
@@ -304,7 +372,7 @@ const ProjectInformation = () => {
         if (!canEdit) return;
         try {
             await supabase
-                .from('project_task_team')
+                .from('project_team')
                 .delete()
                 .eq('project_id', projectId);
 
@@ -319,134 +387,112 @@ const ProjectInformation = () => {
                 .eq('id', projectId);
 
             if (error) {
-                throw error;
+                console.error('[DELETE_PROJECT_ERROR] Cannot delete project:', error.message);
+                throw new Error('Không thể xóa dự án');
             }
 
+            console.log('[DELETE_PROJECT_SUCCESS]', { projectId });
             router.push('/screens/home');
 
         } catch (error: any) {
+            console.error('[DELETE_PROJECT_FAILED]', error.message);
             alert('Không thể xóa dự án. Vui lòng thử lại.');
         }
     };
 
+    const handleGoBack = () => {
+        try {
+            router.back();
+        } catch (error) {
+            logger.error("Error in handleGoBack", error);
+        }
+    };
+
+    const handleMembersAdded = (newMembers: TeamMember[]) => {
+        setTeamMembers([...teamMembers, ...newMembers]);
+    };
+
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Image
-                        source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/back.png' }}
-                        style={{ width: 24, height: 24, tintColor: '#FFFFFF' }}
-                    />
-                </TouchableOpacity>
-                <CustomText style={styles.headerTitle}>Project Information</CustomText>
-            </View>
+        <View style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+            <Head
+                onLeftPress={handleGoBack}
+                showRightIcon={false}
+            >
+                <CustomText fontFamily='Inter' fontSize={25} style={[{ color: colors.text7 }]}>Project Information</CustomText>
+            </Head>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-                <CustomText style={styles.title1}>Project Title</CustomText>
-                <TextInput
-                    style={styles.input1}
+                <CustomText fontSize={22} style={[styles.title1, { color: colors.text7 }]}>Project Title</CustomText>
+                <MyInputField
+                    style={{ paddingHorizontal: 20 }}
+                    textStyle={{ fontSize: 21, opacity: 0.99 }}
                     value={title}
                     onChangeText={setTitle}
                     placeholder="Enter project title"
-                    placeholderTextColor="#B0BEC5"
+                    backgroundColor={colors.box2}
                     editable={canEdit}
                 />
 
-                <CustomText style={styles.title2}>Project Details</CustomText>
-                <TextInput
-                    style={styles.input2}
+                <CustomText fontSize={22} style={[styles.title1, { color: colors.text7 }]}>Project Details</CustomText>
+                <MyInputField
+                    style={{ paddingHorizontal: 20, height: 100, flexWrap: 'wrap' }}
+                    textStyle={{ fontSize: 13, opacity: 0.99 }}
                     value={description}
                     onChangeText={setDescription}
                     placeholder="Enter project details"
-                    placeholderTextColor="#B0BEC5"
-                    multiline
+                    backgroundColor={colors.box2}
                     editable={canEdit}
                 />
 
-                <CustomText style={styles.title2}>Add team members</CustomText>
-                <View style={styles.box1}>
-                    <FlatList
-                        style={styles.temMember}
-                        data={teamMembers}
-                        horizontal
-                        keyExtractor={(item, index) => `${item.id}-${index}`}
-                        renderItem={({ item }) => (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 10 }}>
-                                <Image
-                                    source={
-                                        item.avatar
-                                            ? { uri: item.avatar }
-                                            : { uri: 'https://via.placeholder.com/40' }
-                                    }
-                                    style={{ width: 41, height: 41, borderRadius: 20.5 }}
-                                />
-                                <CustomText style={{ color: '#FFFFFF', marginLeft: 5, fontSize: 14 }}>
-                                    {item.full_name}
-                                </CustomText>
-                                {canEdit && (
-                                    <TouchableOpacity onPress={() => handleRemoveMember(item.id)} style={{ marginLeft: 5 }}>
-                                        <Image
-                                            source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/delete-sign.png' }}
-                                            style={{ width: 20, height: 20, tintColor: '#FFFFFF' }}
-                                        />
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        )}
-                        ListFooterComponent={
-                            canEdit ? (
-                                <TouchableOpacity onPress={() => setShowAddMemberModal(true)} style={styles.addTeamMember}>
-                                    <Image
-                                        source={{ uri: 'https://img.icons8.com/ios-filled/50/000000/plus.png' }}
-                                        style={{ width: 20, height: 20, tintColor: '#000000' }}
-                                    />
-                                </TouchableOpacity>
-                            ) : null
-                        }
-                    />
-                </View>
+                <CustomText fontFamily='Inter' fontSize={22} style={[styles.title2, { color: colors.text7 }]}>Add team members</CustomText>
+                <TeamMembersList
+                    teamMembers={teamMembers}
+                    canEdit={canEdit}
+                    colors={colors}
+                    onRemoveMember={handleRemoveMember}
+                    onOpenAddMemberModal={() => setShowAddMemberModal(true)}
+                    avatarSize={20}
+                />
 
-                <CustomText style={styles.title2}>Time & Date</CustomText>
+                <CustomText fontFamily='Inter' fontSize={22} style={[styles.title2, { color: colors.text7 }]}>Time & Date</CustomText>
                 <View style={styles.box2}>
                     <TouchableOpacity
                         onPress={() => canEdit && setShowTimePicker(true)}
-                        style={styles.Time}
+                        style={[styles.Time, { backgroundColor: colors.box2 }]}
                         disabled={!canEdit}
                     >
-                        <View style={styles.timeIcon}>
-                            <Image
-                                source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/clock.png' }}
-                                style={{ width: 20, height: 20, tintColor: '#000000' }}
-                            />
+                        <View style={{ backgroundColor: colors.box1, flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            <Icon category='screens' name='clock' style={{ width: 24, height: 24 }} />
                         </View>
                         <View style={styles.timeView}>
-                            <CustomText style={{ color: '#FFFFFF', fontSize: 16 }}>
-                                {dueDate.toLocaleTimeString('en-US', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    hour12: true,
-                                })}
+                            <CustomText fontSize={20} style={{ color: colors.text5 }}>
+                                {dueDate && !isNaN(dueDate.getTime())
+                                    ? dueDate.toLocaleTimeString('en-US', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        hour12: true,
+                                    })
+                                    : 'Invalid Time'}
                             </CustomText>
                         </View>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => canEdit && setShowDatePicker(true)}
-                        style={styles.Date}
+                        style={[styles.Date, { backgroundColor: colors.box2 }]}
                         disabled={!canEdit}
                     >
-                        <View style={styles.dateIcon}>
-                            <Image
-                                source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/calendar.png' }}
-                                style={{ width: 20, height: 20, tintColor: '#000000' }}
-                            />
+                        <View style={[styles.dateIcon, { backgroundColor: colors.box1 }]}>
+                            <Icon category='screens' name='calendar' style={{ width: 24, height: 24 }} />
                         </View>
                         <View style={styles.dateView}>
-                            <CustomText style={{ color: '#FFFFFF', fontSize: 16 }}>
-                                {dueDate.toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                })}
+                            <CustomText fontSize={20} style={{ color: colors.text5 }}>
+                                {dueDate && !isNaN(dueDate.getTime())
+                                    ? dueDate.toLocaleDateString('en-GB', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                    })
+                                    : 'Invalid Date'}
                             </CustomText>
                         </View>
                     </TouchableOpacity>
@@ -469,7 +515,7 @@ const ProjectInformation = () => {
                     />
                 )}
 
-                <CustomText style={styles.title2}>Permission</CustomText>
+                <CustomText fontFamily='Inter' fontSize={22} style={[styles.title2, { color: colors.text7 }]}>Permission</CustomText>
                 <TouchableOpacity
                     onPress={() => {
                         if (canEdit) {
@@ -477,83 +523,53 @@ const ProjectInformation = () => {
                             console.log('[PERMISSION_MODAL_OPEN] Permission modal opened', { currentPermission: permission });
                         }
                     }}
-                    style={[styles.input1, { flexDirection: 'row', alignItems: 'center', opacity: canEdit ? 1 : 0.6 }]}
+                    style={[{ flexDirection: 'row', width: '65%', height: 40, opacity: canEdit ? 1 : 0.6 }]}
                     disabled={!canEdit}
                 >
-                    <CustomText style={{ color: '#FFFFFF', flex: 1, fontSize: 16 }}>
-                        {permission ? 'Allow editing' : 'No editing allowed'}
-                    </CustomText>
-                    <Image
-                        source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/expand-arrow.png' }}
-                        style={{ width: 20, height: 20, tintColor: '#FED36A' }}
-                    />
+                    <View style={{ flex: 1, backgroundColor: colors.box1, justifyContent: 'center', alignItems: 'center' }}>
+                        <Icon category='screens' name='more' style={{ width: 24, height: 24 }} />
+                    </View>
+                    <View style={{ flex: 4, backgroundColor: colors.box2, justifyContent: 'center', alignItems: 'center' }}>
+                        <CustomText fontSize={20} style={{ color: colors.text5, opacity: 0.9 }}>
+                            {permission ? 'Allow editing' : 'No editing allowed'}
+                        </CustomText>
+                    </View>
                 </TouchableOpacity>
 
                 <View style={styles.deleteChange}>
                     <MyButton
                         onPress={handleDeleteProject}
-                        title={<CustomText style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' }}>DELETE</CustomText>}
+                        title={<CustomText fontFamily='InterSemiBold' fontSize={18} style={{ color: colors.text5 }}>Delete</CustomText>}
                         style={[styles.Delete, { opacity: canEdit ? 1 : 0.6 }]}
                         disabled={!canEdit}
+                        backgroundColor={colors.box2}
                     />
                     <MyButton
                         onPress={handleUpdateProject}
-                        title={<CustomText style={{ color: '#000000', fontSize: 18, fontWeight: 'bold' }}>CHANGE</CustomText>}
+                        title={<CustomText fontFamily='InterSemiBold' fontSize={18} style={{ color: colors.text4 }}>Change</CustomText>}
                         style={[styles.Change, { opacity: canEdit ? 1 : 0.6 }]}
                         disabled={!canEdit}
+                        backgroundColor={colors.box1}
                     />
                 </View>
             </ScrollView>
 
-            <Modal visible={showAddMemberModal} transparent animationType="slide">
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 20 }}>
-                        <CustomText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
-                            Add Team Member
-                        </CustomText>
-                        <FlatList
-                            data={availableUsers.filter(
-                                (user) => user.id !== currentUserId && !teamMembers.find((member) => member.id === user.id)
-                            )}
-                            keyExtractor={(item) => item.id}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    onPress={() => handleAddMember(item)}
-                                    style={{ flexDirection: 'row', alignItems: 'center', padding: 10 }}
-                                    disabled={!canEdit}
-                                >
-                                    <Image
-                                        source={
-                                            item.avatar
-                                                ? { uri: item.avatar }
-                                                : { uri: 'https://via.placeholder.com/40' }
-                                        }
-                                        style={{ width: 40, height: 40, borderRadius: 20, marginRight: 10 }}
-                                    />
-                                    <CustomText style={{ fontSize: 16 }}>{item.full_name || 'Không rõ'}</CustomText>
-                                </TouchableOpacity>
-                            )}
-                        />
-                        <TouchableOpacity
-                            onPress={() => setShowAddMemberModal(false)}
-                            style={{
-                                backgroundColor: '#FED36A',
-                                padding: 10,
-                                borderRadius: 5,
-                                alignItems: 'center',
-                                marginTop: 10,
-                            }}
-                        >
-                            <CustomText style={{ color: '#000000', fontSize: 16 }}>Close</CustomText>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
+            <AddTeamMemberModal
+                visible={showAddMemberModal}
+                onClose={() => setShowAddMemberModal(false)}
+                availableUsers={availableUsers}
+                teamMembers={teamMembers}
+                projectId={projectId}
+                currentUserId={currentUserId}
+                canEdit={canEdit}
+                colors={colors}
+                onMembersAdded={handleMembersAdded}
+            />
 
             <Modal visible={showPermissionModal} transparent animationType="slide">
                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 20 }}>
-                        <CustomText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+                    <View style={{ backgroundColor: colors.backgroundColor, padding: 20 }}>
+                        <CustomText fontFamily='InterSemiBold' fontSize={22} style={{ marginBottom: 10, textAlign: 'center', color: colors.text7 }}>
                             Select Permission
                         </CustomText>
                         {[
@@ -575,7 +591,7 @@ const ProjectInformation = () => {
                                 }}
                                 style={{ padding: 10 }}
                             >
-                                <CustomText style={{ fontSize: 16 }}>{option.label}</CustomText>
+                                <CustomText fontSize={16} style={{ color: colors.text5 }}>{option.label}</CustomText>
                             </TouchableOpacity>
                         ))}
                         <TouchableOpacity
@@ -584,14 +600,13 @@ const ProjectInformation = () => {
                                 setShowPermissionModal(false);
                             }}
                             style={{
-                                backgroundColor: '#FED36A',
+                                backgroundColor: colors.box1,
                                 padding: 10,
-                                borderRadius: 5,
                                 alignItems: 'center',
                                 marginTop: 10,
                             }}
                         >
-                            <CustomText style={{ color: '#000000', fontSize: 16 }}>Close</CustomText>
+                            <CustomText style={{ color: colors.text4, fontSize: 16 }}>Close</CustomText>
                         </TouchableOpacity>
                     </View>
                 </View>

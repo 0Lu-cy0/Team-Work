@@ -1,19 +1,18 @@
-// components/inputButton.tsx
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
 import * as Font from 'expo-font';
-import { useThemeContext } from '@/context/ThemeContext'; // Import theme context
+import { useThemeContext } from '@/context/ThemeContext';
 
 interface MyInputFieldProps {
     value: string;
     onChangeText: (text: string) => void;
-    style?: ViewStyle;
+    style?: ViewStyle | ViewStyle[];
     textStyle?: TextStyle;
     leftIcon?: React.ReactNode;
     rightIcon?: React.ReactNode;
     iconSize?: number;
     iconColor?: string;
-    backgroundColor?: string; // Giữ prop này để có thể ghi đè nếu cần
+    backgroundColor?: string;
     onRightIconPress?: () => void;
     secureTextEntry?: boolean;
     placeholder?: string;
@@ -21,8 +20,8 @@ interface MyInputFieldProps {
     multiline?: boolean;
     scrollEnabled?: boolean;
     textAlignVertical?: 'auto' | 'top' | 'bottom' | 'center';
-    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad'; // Thêm prop keyboardType
-    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters'; // Thêm prop autoCapitalize
+    keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
     editable?: boolean;
 }
 
@@ -46,7 +45,7 @@ const MyInputField: React.FC<MyInputFieldProps> = ({
     editable = true,
 }) => {
     const [fontLoaded, setFontLoaded] = useState(false);
-    const { colors } = useThemeContext(); // Lấy colors từ theme context
+    const { colors } = useThemeContext();
 
     useEffect(() => {
         const loadFonts = async () => {
@@ -65,7 +64,7 @@ const MyInputField: React.FC<MyInputFieldProps> = ({
             style={[
                 styles.container,
                 style,
-                { backgroundColor: backgroundColor || colors.box1 }, // Sử dụng backgroundColor từ prop hoặc theme
+                { backgroundColor: backgroundColor || colors.box2 },
             ]}
         >
             {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
@@ -99,9 +98,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        height: 58,
-        width: '100%', // Thay width cố định thành 100% để responsive
-        borderRadius: 8, // Thêm borderRadius để giống thiết kế Figma
+        // height: 58,
+        width: '100%',
     },
     iconLeft: {
         marginRight: 20,

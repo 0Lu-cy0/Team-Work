@@ -39,7 +39,6 @@ const TeamMembersModal: React.FC<TeamMembersModalProps> = ({ visible, onClose, m
                         keyExtractor={(item) => item.user_id}
                         renderItem={({ item }) => (
                             <View style={styles.memberRow}>
-                                {/* Hiển thị avatar nếu có, nếu không thì dùng Icon mặc định */}
                                 {item.avatar ? (
                                     <Image
                                         source={{ uri: item.avatar }}

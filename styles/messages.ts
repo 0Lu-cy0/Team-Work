@@ -3,81 +3,55 @@ import { StyleSheet } from "react-native";
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#212832',
+        paddingHorizontal: 16,
     },
-    tabContainer: {
-        marginTop: 0,
-        width: '100%',
-        height: 47,
+    searchContainer: {
+        paddingVertical: 8,
+    },
+    tabsContainer: {
         flexDirection: 'row',
+        marginBottom: 8,
     },
-    chatButton: {
-        marginLeft: 29,//29
-        width: 175,//175
-        height: 47,//47
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    groupsButton: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginLeft: 20,//29
-        width: 175,//175
-        height: 47,//47
-    },
-    highlightTab: {
-        position: 'absolute',
-        width: 175,//175
-        height: 47,
-        backgroundColor: '#FED36A',
-    },
-    groupBox: {
+    tab: {
         flex: 1,
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'pink',
+        // paddingVertical: 12,
+        alignItems: 'center',
+        // backgroundColor: '#2A3A5A',
+        // borderRadius: 8,
+        // marginHorizontal: 4,
+    },
+    activeTab: {
+        backgroundColor: '#FFC107',
+    },
+    tabText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#FFFFFF',
+    },
+    activeTabText: {
+        color: '#1E2A44',
+    },
+    emptyText: {
+        color: '#A0AEC0',
+        textAlign: 'center',
         marginTop: 32,
-        paddingHorizontal: 29,
-    },
-    smallBox: {
-        width: 100,
-        height: 40,
-        marginBottom: 10,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#212832',
-    },
-    spinner: {
-        width: 50,
-        height: 50,
-        borderWidth: 5,
-        borderColor: '#FED36A',
-        borderTopColor: 'transparent',
-        borderRadius: 25,
-    },
-    inFo: {
-        width: "100%",
-        height: 47,
-        backgroundColor: 'blue',
-        flexDirection: 'row',
+        fontSize: 16,
     },
     startChatContainer: {
-        flex: 1,
-        marginTop: 48,
-        width: '100%',
-        alignItems: 'flex-end',
-    },
-    startChat: {
-        width: 175,
-        height: 47,
-        backgroundColor: '#FED36A',
-        justifyContent: 'center',
+        padding: 16,
         alignItems: 'center',
-    }
-
+    },
+    startChatButton: {
+        backgroundColor: '#FFC107',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+    },
+    startChatButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1E2A44',
+    },
 });
 
 export default styles;

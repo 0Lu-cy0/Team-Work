@@ -18,7 +18,7 @@ const AddTeamMemberFlashList: React.FC<HorizontalListProps> = ({ data }) => {
                 <View
                     style={[
                         styles.box,
-                        index > 0 && { marginLeft: 9 }, // Chỉ hộp thứ 2 trở đi mới có marginLeft
+                        index > 0 && { marginLeft: 9 },
                     ]}
                 >
                     <Text style={styles.text}>{item}</Text>

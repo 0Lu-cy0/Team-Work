@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import 'react-native-get-random-values';
 import { SafeAreaView, View } from "react-native";
 import MyButton from "@/components/MyButton";
 import ResizableLogoBox from "../components/Logo";

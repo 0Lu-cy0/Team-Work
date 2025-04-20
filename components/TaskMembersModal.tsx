@@ -1,6 +1,5 @@
-// TaskMembersModal giữ nguyên như trước, chỉ cần đảm bảo import đúng
 import React, { useState } from 'react';
-import { Modal, View, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import CustomText from '@/constants/CustomText';
 import MyButton from '@/components/MyButton';
 
@@ -10,6 +9,8 @@ interface TaskMembersModalProps {
     members: Member[];
     selectedMembers: string[];
     onSave: (selectedMemberIds: string[]) => void;
+    projectId?: string;
+    taskId?: string;
 }
 
 interface Member {
@@ -25,6 +26,8 @@ const TaskMembersModal: React.FC<TaskMembersModalProps> = ({
     members,
     selectedMembers,
     onSave,
+    projectId,
+    taskId,
 }) => {
     const [selected, setSelected] = useState<string[]>(selectedMembers);
 
@@ -50,7 +53,14 @@ const TaskMembersModal: React.FC<TaskMembersModalProps> = ({
             <View style={[
                 styles.checkbox,
                 selected.includes(item.user_id) && styles.checkboxSelected
-            ]} />
+            ]}>
+                {selected.includes(item.user_id) && (
+                    <Image
+                        source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/checkmark.png' }}
+                        style={styles.checkmark}
+                    />
+                )}
+            </View>
         </TouchableOpacity>
     );
 
@@ -125,9 +135,16 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#FED36A',
         borderRadius: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     checkboxSelected: {
         backgroundColor: '#FED36A',
+    },
+    checkmark: {
+        width: 16,
+        height: 16,
+        tintColor: '#000000',
     },
     buttonContainer: {
         flexDirection: 'row',

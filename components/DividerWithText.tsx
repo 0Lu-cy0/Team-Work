@@ -1,22 +1,23 @@
 import React from "react";
 import { View, StyleSheet, ViewStyle, Text } from "react-native";
+import { useThemeContext } from "@/context/ThemeContext";
 
 interface DividerWithTextProps {
   text: JSX.Element | string; // Có thể truyền string hoặc JSX.Element
   containerStyle?: ViewStyle; // Style cho toàn bộ container
   lineStyle?: ViewStyle; // Style cho line
 }
-
 const DividerWithText: React.FC<DividerWithTextProps> = ({
   text,
   containerStyle,
-  lineStyle
 }) => {
+
+  const { colors } = useThemeContext();
   return (
     <View style={[styles.container, containerStyle]}>
-      <View style={[styles.line, lineStyle]} />
+      <View style={[styles.line, { backgroundColor: colors.border, borderColor: colors.border }]} />
       <View>{typeof text === "string" ? <Text>{text}</Text> : text}</View>
-      <View style={[styles.line, lineStyle]} />
+      <View style={[styles.line, { backgroundColor: colors.border, borderColor: colors.border }]} />
     </View>
   );
 };
@@ -30,9 +31,7 @@ const styles = StyleSheet.create({
   },
   line: {
     borderWidth: 1,
-    borderColor: "#8CAAB9",
-    backgroundColor: "#8CAAB9",
-    width: 111,
+    width: 100,
     height: 0,
   },
 });

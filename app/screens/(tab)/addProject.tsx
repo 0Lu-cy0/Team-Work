@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import {
     View,
-    TextInput,
-    TouchableOpacity,
-    Image,
-    FlatList,
     ScrollView,
     Platform,
     RefreshControl,
-    Modal
+    Modal,
+    TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import CustomText from '@/constants/CustomText';
 import MyButton from '@/components/MyButton';
-import TaskMembersModal from '@/components/TaskMembersModal'; // Import TaskMembersModal
+import AddTeamMemberModalSimple from '@/components/AddTeamMemberModalSimple';
+import TeamMembersList from '@/components/TeamMembersList';
 import { supabase } from '@/services/supabase';
 import { Database } from '@/services/database.types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useThemeContext } from '@/context/ThemeContext';
+import MyInputField from '@/components/MyInputField';
 
 type UserRow = Database['public']['Tables']['users']['Row'];
 interface TeamMember {
@@ -48,10 +48,11 @@ const AddProject = () => {
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [permission, setPermission] = useState(false);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
-    const [showTaskMembersModal, setShowTaskMembersModal] = useState(false); // Thay thế showAddMemberModal
+    const [showAddMemberModal, setShowAddMemberModal] = useState(false);
     const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const { colors } = useThemeContext();
 
     const saveFormState = async (state: ProjectFormState) => {
         try {
@@ -93,26 +94,30 @@ const AddProject = () => {
     useEffect(() => {
         const fetchUsersAndCurrentUser = async () => {
             setIsLoading(true);
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
-            if (userError || !user || !user.id) {
-                console.error('Lỗi khi lấy thông tin người dùng:', userError?.message);
-                setIsLoading(false);
-                return;
-            }
-            setCurrentUserId(user.id);
+            try {
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError || !user || !user.id) {
+                    console.error('Lỗi khi lấy thông tin người dùng:', userError?.message);
+                    throw new Error('Không thể xác thực người dùng');
+                }
+                setCurrentUserId(user.id);
 
-            const { data, error } = await supabase
-                .from('users')
-                .select('id, full_name, avatar')
-                .neq('id', user.id)
-                .limit(50);
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('id, full_name, avatar')
+                    .neq('id', user.id)
+                    .limit(50);
 
-            if (error) {
-                console.error('Lỗi khi lấy danh sách người dùng:', error.message);
-            } else {
+                if (error) {
+                    console.error('Lỗi khi lấy danh sách người dùng:', error.message);
+                    throw new Error('Không thể tải danh sách người dùng');
+                }
                 setAvailableUsers(data || []);
+            } catch (error: any) {
+                alert(`Lỗi: ${error.message || 'Không thể tải dữ liệu'}`);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
 
         loadFormState().then(fetchUsersAndCurrentUser);
@@ -133,18 +138,6 @@ const AddProject = () => {
                 return newDate;
             });
         }
-    };
-
-    const handleSaveMembers = (selectedMemberIds: string[]) => {
-        const newTeamMembers = availableUsers
-            .filter(user => selectedMemberIds.includes(user.id))
-            .map(user => ({
-                id: user.id,
-                full_name: user.full_name || 'Không rõ',
-                avatar: user.avatar,
-            }));
-        setTeamMembers(newTeamMembers);
-        setShowTaskMembersModal(false);
     };
 
     const handleRemoveMember = (memberId: string) => {
@@ -193,17 +186,16 @@ const AddProject = () => {
         return data;
     };
 
-    const assignTeamMembers = async (projectId: string, taskId: string, userId: string) => {
+    const assignTeamMembers = async (projectId: string, userId: string) => {
         const teamEntries = [
-            { project_id: projectId, task_id: taskId, user_id: userId, role: 'lead' },
+            { project_id: projectId, user_id: userId, role: 'leader' },
             ...teamMembers.map((member) => ({
                 project_id: projectId,
-                task_id: taskId,
                 user_id: member.id,
                 role: 'member',
             })),
         ];
-        const { error } = await supabase.from('project_task_team').insert(teamEntries);
+        const { error } = await supabase.from('project_team').insert(teamEntries);
         if (error) {
             console.error('Lỗi khi gán thành viên:', error);
             throw error;
@@ -233,10 +225,10 @@ const AddProject = () => {
             const project = await createProject(user.id);
             if (!project || !project.id) throw new Error('Không thể lấy ID dự án');
 
+            await assignTeamMembers(project.id, user.id);
+
             const task = await createInitialTask(project.id, user.id);
             if (!task || !task.id) throw new Error('Không thể tạo task ban đầu');
-
-            await assignTeamMembers(project.id, task.id, user.id);
 
             setTitle('');
             setDescription('');
@@ -261,112 +253,46 @@ const AddProject = () => {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#212832', padding: 20 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-                <TouchableOpacity onPress={() => router.back()} disabled={isLoading}>
-                    <Image
-                        source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/back.png' }}
-                        style={{ width: 24, height: 24, tintColor: '#FFFFFF' }}
-                    />
-                </TouchableOpacity>
-                <CustomText style={{ color: '#FFFFFF', fontSize: 20, fontWeight: 'bold', marginLeft: 10 }}>
-                    TẠO DỰ ÁN MỚI
-                </CustomText>
-            </View>
-
+        <View style={{ flex: 1, backgroundColor: colors.backgroundColor, paddingHorizontal: 20 }}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                }
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
-                <CustomText style={{ color: '#FFFFFF', marginBottom: 10 }}>TIÊU ĐỀ DỰ ÁN</CustomText>
-                <TextInput
-                    style={{
-                        backgroundColor: '#455A64',
-                        color: '#FFFFFF',
-                        padding: 10,
-                        borderRadius: 5,
-                        marginBottom: 20,
-                    }}
+                <CustomText fontSize={22} style={{ marginBottom: 8, color: colors.text7 }}>
+                    Project Title
+                </CustomText>
+                <MyInputField
+                    style={{ paddingHorizontal: 20 }}
+                    textStyle={{ fontSize: 21, opacity: 0.99 }}
                     value={title}
                     onChangeText={setTitle}
-                    placeholder="Nhập tiêu đề dự án"
-                    placeholderTextColor="#B0BEC5"
-                    editable={!isLoading}
+                    placeholder="Enter project title"
+                    backgroundColor={colors.box2}
                 />
-
-                <CustomText style={{ color: '#FFFFFF', marginBottom: 10 }}>CHI TIẾT DỰ ÁN</CustomText>
-                <TextInput
-                    style={{
-                        backgroundColor: '#455A64',
-                        color: '#FFFFFF',
-                        padding: 10,
-                        borderRadius: 5,
-                        marginBottom: 20,
-                        height: 100,
-                        textAlignVertical: 'top',
-                    }}
+                <CustomText fontSize={22} style={{ color: colors.text7, marginBottom: 8, marginTop: 33 }}>
+                    Project Details
+                </CustomText>
+                <MyInputField
+                    style={{ paddingHorizontal: 20, height: 100, flexWrap: 'wrap' }}
+                    textStyle={{ fontSize: 13, opacity: 0.99 }}
                     value={description}
                     onChangeText={setDescription}
-                    placeholder="Nhập chi tiết dự án"
-                    placeholderTextColor="#B0BEC5"
-                    multiline
-                    editable={!isLoading}
+                    placeholder="Enter project details"
+                    backgroundColor={colors.box2}
                 />
 
-                <CustomText style={{ color: '#FFFFFF', marginBottom: 10 }}>Thêm thành viên nhóm</CustomText>
-                <View style={{ flexDirection: 'row', marginBottom: 20, alignItems: 'center' }}>
-                    <FlatList
-                        data={teamMembers}
-                        horizontal
-                        keyExtractor={(item) => item.id}
-                        initialNumToRender={5}
-                        maxToRenderPerBatch={10}
-                        renderItem={({ item }) => (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 10 }}>
-                                <Image
-                                    source={
-                                        item.avatar
-                                            ? { uri: item.avatar }
-                                            : { uri: 'https://via.placeholder.com/40' }
-                                    }
-                                    style={{ width: 40, height: 40, borderRadius: 20 }}
-                                />
-                                <CustomText style={{ color: '#FFFFFF', marginLeft: 5 }}>{item.full_name}</CustomText>
-                                <TouchableOpacity
-                                    onPress={() => handleRemoveMember(item.id)}
-                                    style={{ marginLeft: 5 }}
-                                    disabled={isLoading}
-                                >
-                                    <Image
-                                        source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/delete-sign.png' }}
-                                        style={{ width: 20, height: 20, tintColor: '#FFFFFF' }}
-                                    />
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                        ListFooterComponent={
-                            <TouchableOpacity
-                                onPress={() => setShowTaskMembersModal(true)}
-                                style={{
-                                    backgroundColor: '#FED36A',
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: 20,
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                }}
-                                disabled={isLoading}
-                            >
-                                <Image
-                                    source={{ uri: 'https://img.icons8.com/ios-filled/50/000000/plus.png' }}
-                                    style={{ width: 20, height: 20, tintColor: '#000000' }}
-                                />
-                            </TouchableOpacity>
-                        }
-                    />
-                </View>
+                <CustomText fontSize={22} style={{ color: colors.text7, marginBottom: 8, marginTop: 33 }}>
+                    Add team members
+                </CustomText>
+                <TeamMembersList
+                    teamMembers={teamMembers}
+                    canEdit={!isLoading}
+                    colors={colors}
+                    onRemoveMember={handleRemoveMember}
+                    onOpenAddMemberModal={() => setShowAddMemberModal(true)}
+                    avatarSize={40}
+                    addButtonColor="#FED36A"
+                />
 
                 <CustomText style={{ color: '#FFFFFF', marginBottom: 10 }}>Thời gian & Ngày</CustomText>
                 <View style={{ flexDirection: 'row', marginBottom: 20 }}>
@@ -382,10 +308,7 @@ const AddProject = () => {
                         }}
                         disabled={isLoading}
                     >
-                        <Image
-                            source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/clock.png' }}
-                            style={{ width: 20, height: 20, tintColor: '#FED36A', marginRight: 5 }}
-                        />
+
                         <CustomText style={{ color: '#FFFFFF' }}>
                             {dueDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                         </CustomText>
@@ -401,10 +324,7 @@ const AddProject = () => {
                         }}
                         disabled={isLoading}
                     >
-                        <Image
-                            source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/calendar.png' }}
-                            style={{ width: 20, height: 20, tintColor: '#FED36A', marginRight: 5 }}
-                        />
+
                         <CustomText style={{ color: '#FFFFFF' }}>
                             {dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </CustomText>
@@ -444,10 +364,7 @@ const AddProject = () => {
                     <CustomText style={{ color: '#FFFFFF', flex: 1 }}>
                         {permission ? 'Allow editing' : 'No editing allowed'}
                     </CustomText>
-                    <Image
-                        source={{ uri: 'https://img.icons8.com/ios-filled/50/ffffff/expand-arrow.png' }}
-                        style={{ width: 20, height: 20, tintColor: '#FED36A' }}
-                    />
+
                 </TouchableOpacity>
 
                 <MyButton
@@ -463,19 +380,13 @@ const AddProject = () => {
                 />
             </ScrollView>
 
-            {/* Sử dụng TaskMembersModal thay cho modal cũ */}
-            <TaskMembersModal
-                visible={showTaskMembersModal}
-                onClose={() => setShowTaskMembersModal(false)}
-                members={availableUsers
-                    .filter(user => user.id !== currentUserId && !teamMembers.find(member => member.id === user.id))
-                    .map(user => ({
-                        user_id: user.id,
-                        name: user.full_name || 'Không rõ',
-                        avatar: user.avatar,
-                    }))}
-                selectedMembers={teamMembers.map(member => member.id)}
-                onSave={handleSaveMembers}
+            <AddTeamMemberModalSimple
+                visible={showAddMemberModal}
+                onClose={() => setShowAddMemberModal(false)}
+                availableUsers={availableUsers}
+                selectedMembers={teamMembers}
+                onMembersSelected={setTeamMembers}
+                colors={colors}
             />
 
             <Modal visible={showPermissionModal} transparent animationType="slide">
