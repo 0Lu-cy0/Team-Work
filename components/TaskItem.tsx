@@ -1,12 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, FlatList } from 'react-native';
+import { View, StyleSheet, Image, FlatList } from 'react-native';
+import { useThemeContext } from '@/context/ThemeContext';
+import CustomText from '@/constants/CustomText';
 
 interface TaskItemProps {
     title: string;
     startTime: string;
     endTime: string;
     members: { id: string; avatar?: string | null }[];
-    isCompleted: boolean; // Thêm prop isCompleted
+    isCompleted: boolean;
 }
 
 export const TaskItem: React.FC<TaskItemProps> = ({
@@ -16,30 +18,58 @@ export const TaskItem: React.FC<TaskItemProps> = ({
     members,
     isCompleted,
 }) => {
+    const { colors } = useThemeContext();
+
+    // Hàm định dạng thời gian
+    const formatTime = (isoString: string): string => {
+        const date = new Date(isoString);
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    };
+
     return (
-        <View style={[styles.container, isCompleted && styles.completedContainer]}>
-            <View style={[styles.leftBorder, isCompleted && styles.hiddenBorder]} />
+        <View style={[[styles.container, { backgroundColor: colors.box3, borderLeftWidth: 10, borderLeftColor: colors.box1 }], isCompleted && { backgroundColor: colors.box1 }]}>
+            <View style={{ flex: 1.5 }}></View>
             <View style={styles.content}>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.time}>{`${startTime} - ${endTime}`}</Text>
+                <CustomText
+                    fontFamily="Inter"
+                    fontSize={22}
+                    style={{ color: isCompleted ? colors.text4 : colors.text5 }}
+                >
+                    {title}
+                </CustomText>
+                <CustomText
+                    fontFamily="Inter"
+                    fontSize={12}
+                    style={{ color: isCompleted ? colors.text4 : colors.text5, opacity: 0.5 }}
+                >
+                    {`${formatTime(startTime)} - ${formatTime(endTime)}`}
+                </CustomText>
             </View>
-            <FlatList
-                data={members}
-                keyExtractor={(item) => item.id}
-                horizontal
-                renderItem={({ item }) => (
-                    item.avatar ? (
-                        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-                    ) : (
-                        <View style={styles.avatarPlaceholder}>
-                            <Text style={styles.avatarText}>
-                                {item.id.charAt(0).toUpperCase()}
-                            </Text>
-                        </View>
-                    )
-                )}
-                style={styles.avatarList}
-            />
+            <View style={{ flex: 4, alignItems: 'center', justifyContent: 'center', marginTop: 13 }}>
+                <FlatList
+                    data={members}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                    renderItem={({ item }) => (
+                        item.avatar ? (
+                            <Image source={{ uri: item.avatar }} style={styles.avatar} />
+                        ) : (
+                            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.box2 }]}>
+                                <CustomText
+                                    fontFamily="InterSemiBold"
+                                    fontSize={14}
+                                    style={{ color: colors.text5 }}
+                                >
+                                    {item.id.charAt(0).toUpperCase()}
+                                </CustomText>
+                            </View>
+                        )
+                    )}
+                    style={styles.avatarList}
+                />
+            </View>
         </View>
     );
 };
@@ -48,63 +78,27 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         paddingVertical: 12,
-        paddingHorizontal: 16,
-        backgroundColor: '#2A3A5A',
         marginBottom: 8,
-        borderRadius: 8,
         alignItems: 'center',
     },
-    completedContainer: {
-        backgroundColor: '#FFC107', // Background màu vàng nếu task hoàn thành
-    },
-    leftBorder: {
-        width: 4,
-        height: '100%',
-        backgroundColor: '#FFC107',
-        borderRadius: 2,
-        marginRight: 12,
-    },
-    hiddenBorder: {
-        backgroundColor: 'transparent', // Ẩn cột nhỏ màu vàng nếu task hoàn thành
-    },
     content: {
-        flex: 1,
+        flex: 11,
     },
-    title: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    time: {
-        color: '#A0AEC0',
-        fontSize: 12,
-        marginTop: 4,
-    },
-    avatarList: {
-        marginLeft: 12,
-    },
+    avatarList: {},
     avatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        marginLeft: -8,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
         borderWidth: 2,
         borderColor: '#1E2A44',
     },
     avatarPlaceholder: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        marginLeft: -8,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
         borderWidth: 2,
         borderColor: '#1E2A44',
-        backgroundColor: '#2A3A5A',
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    avatarText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: 'bold',
     },
 });

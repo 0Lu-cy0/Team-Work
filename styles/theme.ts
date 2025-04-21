@@ -17,6 +17,7 @@ interface ThemeColors {
     text5: string;
     text6: string;
     text7: string;
+    text8: string
     textChat: string;
     textNoti: string;
     loading: string;
@@ -45,6 +46,7 @@ const themes: Themes = {
         text5: '#FFFFFF',
         text6: '#212832',
         text7: '#FFFFFF',
+        text8: '#FED36A',
         textChat: '#B8B8B8',
         textNoti: '#8CAAB9',
         loading: '#887036',
@@ -66,6 +68,7 @@ const themes: Themes = {
         text5: '#000000',
         text6: '#FFFFFF',
         text7: '#204A5E',
+        text8: '#000000',
         textChat: '#204A5E',
         textNoti: '#204A5E',
         loading: '#BA8F24',

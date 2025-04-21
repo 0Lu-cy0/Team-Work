@@ -9,7 +9,7 @@ import Icon from '@/components/Icon';
 import ProfileField from '@/components/ProfileField';
 import { useThemeContext } from '@/context/ThemeContext';
 import ThemeToggleButton from '@/components/ThemeToggleButton';
-
+import Head from '@/components/Head';
 interface User {
     full_name: string;
     email: string;
@@ -156,25 +156,53 @@ const Profile = () => {
         }
     };
 
+    const handleGoBack = () => {
+        try {
+            router.back();
+        } catch (error) {
+            logger.error("Error in handleGoBack", error);
+        }
+    };
+
+    const logger = {
+        error: (message: string, error: any, context?: any) => {
+            console.error(`[TaskDetails] ${message}`, {
+                error: error?.message || error,
+                stack: error?.stack,
+                context,
+                timestamp: new Date().toISOString(),
+            });
+        },
+        warn: (message: string, context?: any) => {
+            console.warn(`[TaskDetails] ${message}`, {
+                context,
+                timestamp: new Date().toISOString(),
+            });
+        },
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+            <Head
+                onLeftPress={handleGoBack}
+                showRightIcon={false}
+            >
+                <CustomText fontFamily='Inter' fontSize={25} style={[{ color: colors.text7, marginRight: 20 }]}>Profile</CustomText>
+            </Head>
             <ThemeToggleButton />
-            <CustomText fontFamily="Montserrat" fontSize={18} style={{ color: colors.text5 }}>
-                Profile
-            </CustomText>
 
             <View style={styles.avatarContainer}>
                 {user.avatar ? (
-                    <Image source={{ uri: user.avatar }} style={styles.avatar} />
+                    <Image source={{ uri: user.avatar }} style={[styles.avatar, { borderColor: colors.box1 }]} />
                 ) : (
-                    <Icon category="avatar" style={styles.avatar} />
+                    <Icon category="avatar" style={{ width: 100, height: 100, borderRadius: 50, borderWidth: 2, borderColor: colors.box1 }} />
                 )}
-                <TouchableOpacity style={[styles.editAvatar, { backgroundColor: colors.box1 }]} onPress={pickImage}>
-                    <Icon category="profile" name="avatarEditing" style={styles.editIcon} />
+                <TouchableOpacity style={[styles.editAvatar, { backgroundColor: colors.backgroundColor }]} onPress={pickImage}>
+                    <Icon category="profile" name="avatarEditing" style={{ width: 20, height: 20 }} />
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.infoContainer}>
+            <View>
                 <ProfileField
                     iconCategory="profile"
                     iconName="userName"
@@ -201,7 +229,7 @@ const Profile = () => {
                 />
                 <ProfileField
                     iconCategory="profile"
-                    iconName="password"
+                    iconName="myTask"
                     iconRightName='more'
                     label="My Tasks"
                     value="My Tasks"
@@ -209,7 +237,7 @@ const Profile = () => {
                 />
                 <ProfileField
                     iconCategory="profile"
-                    iconName="password"
+                    iconName="privacy"
                     iconRightName='more'
                     label="Privacy"
                     value="Privacy"
@@ -217,7 +245,7 @@ const Profile = () => {
                 />
                 <ProfileField
                     iconCategory="profile"
-                    iconName="password"
+                    iconName="setting"
                     iconRightName='more'
                     label="Setting"
                     value="Setting"
@@ -238,7 +266,7 @@ const Profile = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 50,
+        paddingHorizontal: 19,
     },
     avatarContainer: {
         alignItems: 'center',
@@ -249,7 +277,6 @@ const styles = StyleSheet.create({
         height: 100,
         borderRadius: 50,
         borderWidth: 2,
-        borderColor: '#FED36A',
     },
     editAvatar: {
         position: 'absolute',
@@ -257,13 +284,6 @@ const styles = StyleSheet.create({
         right: '40%',
         borderRadius: 15,
         padding: 5,
-    },
-    editIcon: {
-        width: 20,
-        height: 20,
-    },
-    infoContainer: {
-        marginHorizontal: 20,
     },
     infoRow: {
         flexDirection: 'row',
@@ -290,9 +310,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 15,
-        borderRadius: 10,
-        margin: 20,
+        paddingVertical: 15,
     },
     logoutIcon: {
         width: 24,

@@ -41,7 +41,6 @@ const TeamMembersList: React.FC<TeamMembersListProps> = ({
         addTeamMember: {
             width: 40,
             height: 40,
-            borderRadius: 20,
             justifyContent: 'center',
             alignItems: 'center',
             marginLeft: 10,
@@ -54,7 +53,6 @@ const TeamMembersList: React.FC<TeamMembersListProps> = ({
             backgroundColor: colors.box2,
             paddingHorizontal: 10,
             paddingVertical: 10,
-            borderRadius: 5,
         },
         avatar: {
             width: avatarSize,

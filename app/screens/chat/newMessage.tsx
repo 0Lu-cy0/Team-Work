@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
     View,
-    Text,
     StyleSheet,
     SafeAreaView,
     FlatList,
     TouchableOpacity,
-    TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { ContactItem } from '@/components/ContactItem';
-import { Ionicons } from '@expo/vector-icons';
+import { useThemeContext } from '@/context/ThemeContext';
+import Head from '@/components/Head';
+import CustomText from '@/constants/CustomText';
+import MyInputField from '@/components/MyInputField';
+import Icon from '@/components/Icon';
 
 interface Contact {
     id: string;
@@ -25,8 +27,9 @@ export default function NewChatScreen() {
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isSearchVisible, setIsSearchVisible] = useState(false); // Trạng thái hiển thị thanh tìm kiếm
-    const [searchQuery, setSearchQuery] = useState(''); // Từ khóa tìm kiếm
+    const [isSearchVisible, setIsSearchVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const { colors } = useThemeContext();
 
     // Lấy danh sách người dùng từ bảng users
     const fetchContacts = async () => {
@@ -43,7 +46,7 @@ export default function NewChatScreen() {
         const contactItems: Contact[] = data.map((user) => ({
             id: user.id,
             name: user.full_name,
-            avatar: user.avatar ?? '',
+            avatar: user.avatar ?? '', // Đảm bảo avatar là chuỗi, có thể rỗng
             letter: user.full_name.charAt(0).toUpperCase(),
         }));
 
@@ -108,7 +111,7 @@ export default function NewChatScreen() {
     // Xử lý hiển thị/ẩn thanh tìm kiếm
     const toggleSearch = () => {
         if (isSearchVisible) {
-            setSearchQuery(''); // Xóa từ khóa tìm kiếm
+            setSearchQuery('');
         }
         setIsSearchVisible(!isSearchVisible);
     };
@@ -137,43 +140,73 @@ export default function NewChatScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
-                <Text style={styles.emptyText}>Loading...</Text>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+                <CustomText fontFamily="Inter" fontSize={16} style={[styles.emptyText, { color: colors.text5 }]}>
+                    Loading...
+                </CustomText>
             </SafeAreaView>
         );
     }
 
+    const handleGoBack = () => {
+        try {
+            router.back();
+        } catch (error) {
+            logger.error('Error in handleGoBack', error);
+        }
+    };
+
+    const logger = {
+        error: (message: string, error: any, context?: any) => {
+            console.error(`[TaskDetails] ${message}`, {
+                error: error?.message || error,
+                stack: error?.stack,
+                context,
+                timestamp: new Date().toISOString(),
+            });
+        },
+        warn: (message: string, context?: any) => {
+            console.warn(`[TaskDetails] ${message}`, {
+                context,
+                timestamp: new Date().toISOString(),
+            });
+        },
+    };
+
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>New Group</Text>
-                <TouchableOpacity onPress={toggleSearch}>
-                    <Ionicons
-                        name={isSearchVisible ? 'close' : 'search'}
-                        size={24}
-                        color="#FFFFFF"
-                    />
-                </TouchableOpacity>
-            </View>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+            <Head
+                leftIcon={{ category: 'topTab', name: 'back' }}
+                rightIcon={{
+                    category: isSearchVisible ? 'screens' : 'topTab',
+                    name: isSearchVisible ? 'close' : 'search',
+                }}
+                onLeftPress={() => router.back()}
+                onRightPress={toggleSearch}
+                showRightIcon={true}
+            >
+                <CustomText fontFamily="Inter" fontSize={25} style={{ color: colors.text7 }}>
+                    New Chat
+                </CustomText>
+            </Head>
             {isSearchVisible && (
-                <View style={styles.searchContainer}>
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search"
-                        placeholderTextColor="#A0AEC0"
+                <View>
+                    <MyInputField
                         value={searchQuery}
                         onChangeText={setSearchQuery}
+                        placeholder="Search"
+                        rightIcon={<Icon category="screens" name="delete" />}
+                        onRightIconPress={toggleSearch}
                     />
                 </View>
             )}
             <TouchableOpacity style={styles.createGroupButton} onPress={handleCreateGroup}>
-                <View style={styles.createGroupIcon}>
-                    <Text style={styles.createGroupIconText}>g</Text>
+                <View style={[styles.createGroupIcon, { backgroundColor: colors.box1 }]}>
+                    <Icon category='screens' name='teamMember' style={{ width: 24, height: 24 }} />
                 </View>
-                <Text style={styles.createGroupText}>Create a group</Text>
+                <CustomText fontFamily="Inter" fontSize={16} style={styles.createGroupText}>
+                    Create a group
+                </CustomText>
             </TouchableOpacity>
             <FlatList
                 data={sections}
@@ -187,13 +220,23 @@ export default function NewChatScreen() {
                                     onPress={() => toggleUserSelection(contact.id)}
                                 />
                                 {index === 0 && (
-                                    <Text style={styles.sectionLetter}>{item.letter}</Text>
+                                    <CustomText
+                                        fontFamily="InterSemiBold"
+                                        fontSize={24}
+                                        style={[styles.sectionLetter, { color: colors.text8 }]}
+                                    >
+                                        {item.letter}
+                                    </CustomText>
                                 )}
                             </View>
                         ))}
                     </>
                 )}
-                ListEmptyComponent={<Text style={styles.emptyText}>No contacts found</Text>}
+                ListEmptyComponent={
+                    <CustomText fontFamily="Inter" fontSize={16} style={styles.emptyText}>
+                        No contacts found
+                    </CustomText>
+                }
             />
         </SafeAreaView>
     );
@@ -202,56 +245,22 @@ export default function NewChatScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#1E2A44',
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#2A3A5A',
-    },
-    headerTitle: {
-        flex: 1,
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#FFFFFF',
-        textAlign: 'center',
-    },
-    searchContainer: {
-        padding: 16,
-    },
-    searchInput: {
-        backgroundColor: '#2A3A5A',
-        color: '#FFFFFF',
-        padding: 12,
-        borderRadius: 8,
-        fontSize: 16,
+        paddingHorizontal: 29,
     },
     createGroupButton: {
+        marginTop: 10,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFC107',
-        margin: 16,
-        padding: 12,
-        borderRadius: 8,
     },
     createGroupIcon: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#1E2A44',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
-    createGroupIconText: {
-        fontSize: 24,
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-    },
     createGroupText: {
-        fontSize: 16,
         color: '#1E2A44',
         fontWeight: '600',
     },
@@ -263,14 +272,9 @@ const styles = StyleSheet.create({
         right: 16,
         top: '50%',
         transform: [{ translateY: -12 }],
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#FFC107',
     },
     emptyText: {
-        color: '#A0AEC0',
         textAlign: 'center',
         marginTop: 32,
-        fontSize: 16,
     },
 });

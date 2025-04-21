@@ -18,6 +18,8 @@ import { Database } from '@/services/database.types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemeContext } from '@/context/ThemeContext';
 import MyInputField from '@/components/MyInputField';
+import styles from '@/styles/projectInformation';
+import Icon from '@/components/Icon';
 
 type UserRow = Database['public']['Tables']['users']['Row'];
 interface TeamMember {
@@ -290,44 +292,48 @@ const AddProject = () => {
                     colors={colors}
                     onRemoveMember={handleRemoveMember}
                     onOpenAddMemberModal={() => setShowAddMemberModal(true)}
-                    avatarSize={40}
-                    addButtonColor="#FED36A"
+                    avatarSize={20}
                 />
 
-                <CustomText style={{ color: '#FFFFFF', marginBottom: 10 }}>Thời gian & Ngày</CustomText>
-                <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+                <CustomText fontFamily='Inter' fontSize={22} style={[styles.title2, { color: colors.text7 }]}>Time & Date</CustomText>
+                <View style={styles.box2}>
                     <TouchableOpacity
                         onPress={() => setShowTimePicker(true)}
-                        style={{
-                            flexDirection: 'row',
-                            backgroundColor: '#455A64',
-                            padding: 10,
-                            borderRadius: 5,
-                            marginRight: 10,
-                            alignItems: 'center',
-                        }}
-                        disabled={isLoading}
+                        style={[styles.Time, { backgroundColor: colors.box2 }]}
                     >
-
-                        <CustomText style={{ color: '#FFFFFF' }}>
-                            {dueDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                        </CustomText>
+                        <View style={{ backgroundColor: colors.box1, flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            <Icon category='screens' name='clock' style={{ width: 24, height: 24 }} />
+                        </View>
+                        <View style={styles.timeView}>
+                            <CustomText fontSize={20} style={{ color: colors.text5 }}>
+                                {dueDate && !isNaN(dueDate.getTime())
+                                    ? dueDate.toLocaleTimeString('en-US', {
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        hour12: true,
+                                    })
+                                    : 'Invalid Time'}
+                            </CustomText>
+                        </View>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setShowDatePicker(true)}
-                        style={{
-                            flexDirection: 'row',
-                            backgroundColor: '#455A64',
-                            padding: 10,
-                            borderRadius: 5,
-                            alignItems: 'center',
-                        }}
-                        disabled={isLoading}
+                        style={[styles.Date, { backgroundColor: colors.box2 }]}
                     >
-
-                        <CustomText style={{ color: '#FFFFFF' }}>
-                            {dueDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                        </CustomText>
+                        <View style={[styles.dateIcon, { backgroundColor: colors.box1 }]}>
+                            <Icon category='screens' name='calendar' style={{ width: 24, height: 24 }} />
+                        </View>
+                        <View style={styles.dateView}>
+                            <CustomText fontSize={20} style={{ color: colors.text5 }}>
+                                {dueDate && !isNaN(dueDate.getTime())
+                                    ? dueDate.toLocaleDateString('en-GB', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                    })
+                                    : 'Invalid Date'}
+                            </CustomText>
+                        </View>
                     </TouchableOpacity>
                 </View>
 
@@ -348,34 +354,32 @@ const AddProject = () => {
                     />
                 )}
 
-                <CustomText style={{ color: '#FFFFFF', marginBottom: 10 }}>Quyền</CustomText>
+                <CustomText fontFamily='Inter' fontSize={22} style={[styles.title2, { color: colors.text7 }]}>Permission</CustomText>
                 <TouchableOpacity
-                    onPress={() => setShowPermissionModal(true)}
-                    style={{
-                        flexDirection: 'row',
-                        backgroundColor: '#455A64',
-                        padding: 10,
-                        borderRadius: 5,
-                        marginBottom: 20,
-                        alignItems: 'center',
+                    onPress={() => {
+                        setShowPermissionModal(true);
                     }}
-                    disabled={isLoading}
+                    style={[{ flexDirection: 'row', width: '65%', height: 40 }]}
                 >
-                    <CustomText style={{ color: '#FFFFFF', flex: 1 }}>
-                        {permission ? 'Allow editing' : 'No editing allowed'}
-                    </CustomText>
-
+                    <View style={{ flex: 1, backgroundColor: colors.box1, justifyContent: 'center', alignItems: 'center' }}>
+                        <Icon category='screens' name='more' style={{ width: 24, height: 24 }} />
+                    </View>
+                    <View style={{ flex: 4, backgroundColor: colors.box2, justifyContent: 'center', alignItems: 'center' }}>
+                        <CustomText fontSize={20} style={{ color: colors.text5, opacity: 0.9 }}>
+                            {permission ? 'Allow editing' : 'No editing allowed'}
+                        </CustomText>
+                    </View>
                 </TouchableOpacity>
 
                 <MyButton
                     onPress={handleCreateProject}
-                    title={<CustomText style={{ color: '#000000', fontSize: 18, fontWeight: 'bold' }}>TẠO</CustomText>}
+                    title={<CustomText fontFamily='InterSemiBold' fontSize={18} style={{ color: colors.text5 }}>Create</CustomText>}
                     disabled={isLoading}
                     style={{
                         backgroundColor: isLoading ? '#B0BEC5' : '#FED36A',
-                        padding: 15,
-                        borderRadius: 5,
+                        paddingVertical: 15,
                         alignItems: 'center',
+                        marginTop: 20,
                     }}
                 />
             </ScrollView>

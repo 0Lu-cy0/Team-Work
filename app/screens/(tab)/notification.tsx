@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
     View,
-    Text,
     StyleSheet,
     SafeAreaView,
     TouchableOpacity,
@@ -11,7 +10,8 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { NotificationItem } from '@/components/NotificationItem';
 import { formatRelativeTime } from '@/utils/dateUtils';
-import { Ionicons } from '@expo/vector-icons';
+import { useThemeContext } from '@/context/ThemeContext';
+import CustomText from '@/constants/CustomText';
 
 interface Notification {
     id: string;
@@ -34,6 +34,7 @@ export default function NotificationScreen() {
     const [newNotifications, setNewNotifications] = useState<Notification[]>([]);
     const [earlierNotifications, setEarlierNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { colors } = useThemeContext();
 
     const fetchNotifications = async () => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -128,14 +129,16 @@ export default function NotificationScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
-                <Text style={styles.emptyText}>Loading...</Text>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+                <CustomText fontFamily="Inter" fontSize={16} style={[styles.emptyText, { color: colors.text5 }]}>
+                    Loading...
+                </CustomText>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
             <FlashList<ListItem>
                 data={[
                     { type: 'header', title: 'New' } as const,
@@ -149,7 +152,13 @@ export default function NotificationScreen() {
                 renderItem={({ item }) => {
                     if (item.type === 'header') {
                         return item.title === 'New' && newNotifications.length === 0 ? null : (
-                            <Text style={styles.sectionHeader}>{item.title}</Text>
+                            <CustomText
+                                fontFamily="Inter"
+                                fontSize={23}
+                                style={[styles.sectionHeader, { color: colors.text5 }]}
+                            >
+                                {item.title}
+                            </CustomText>
                         );
                     }
                     const notification = item.data;
@@ -164,7 +173,11 @@ export default function NotificationScreen() {
                     );
                 }}
                 estimatedItemSize={70}
-                ListEmptyComponent={<Text style={styles.emptyText}>No notifications found</Text>}
+                ListEmptyComponent={
+                    <CustomText fontFamily="Inter" fontSize={16} style={[styles.emptyText, { color: colors.text5 }]}>
+                        No notifications found
+                    </CustomText>
+                }
             />
         </SafeAreaView>
     );
@@ -173,42 +186,28 @@ export default function NotificationScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#1E2A44',
+        paddingHorizontal: 29,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
         paddingVertical: 12,
     },
-    headerTitle: {
-        color: '#FFFFFF',
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
     sectionHeader: {
-        color: '#A0AEC0',
-        fontSize: 16,
-        fontWeight: '600',
-        paddingHorizontal: 16,
         paddingVertical: 8,
     },
     emptyText: {
-        color: '#A0AEC0',
         textAlign: 'center',
         marginTop: 32,
-        fontSize: 16,
     },
     bottomNav: {
         flexDirection: 'row',
         justifyContent: 'space-around',
         alignItems: 'center',
         paddingVertical: 12,
-        backgroundColor: '#2A3A5A',
     },
     fab: {
-        backgroundColor: '#FFC107',
         width: 48,
         height: 48,
         borderRadius: 24,

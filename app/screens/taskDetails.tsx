@@ -508,24 +508,41 @@ const TaskDetails: React.FC = () => {
         }
 
         try {
+            // Kiểm tra và xử lý dueDateTask và dueTimeTask
+            const isValidDate = (date: unknown): boolean => date instanceof Date && !isNaN(date.getTime());
+
+            const dueDate = isValidDate(dueDateTask)
+                ? dueDateTask.toISOString()
+                : new Date().toISOString(); // Fallback về ngày hiện tại
+
+            const dueTime = isValidDate(dueTimeTask)
+                ? dueTimeTask.toISOString()
+                : new Date().toISOString(); // Fallback về thời gian hiện tại
+
+            // Debug giá trị đầu vào
+            console.log('dueDateTask:', dueDateTask, '->', dueDate);
+            console.log('dueTimeTask:', dueTimeTask, '->', dueTime);
+
             const { error } = await supabase
                 .from('tasks')
                 .update({
                     title: nameTask,
-                    due_date: dueDateTask.toISOString(),
-                    start_time: dueTimeTask.toISOString(),
-                    end_time: dueTimeTask.toISOString(),
+                    due_date: dueDate,
+                    start_time: dueTime,
+                    end_time: dueTime, // Giữ end_time bằng start_time như code gốc
                 })
                 .eq('id', selectedTask.id);
 
             if (error) {
                 logger.error("Error updating task", error, { taskId: selectedTask.id, nameTask });
+                alert('Lỗi khi cập nhật task: ' + error.message);
                 return;
             }
 
             setTaskModalVisible(false);
         } catch (error) {
             logger.error("Unexpected error in handleChangeTask", error, { taskId: selectedTask?.id, nameTask });
+            alert('Lỗi không xác định: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
     };
 
@@ -720,7 +737,7 @@ const TaskDetails: React.FC = () => {
             </View>
             <View style={styles.details}>
                 <CustomText fontFamily='InterMedium' fontSize={22} style={{ color: colors.text7 }}>Project Details</CustomText>
-                <CustomText fontFamily='InterReguler' fontSize={15} style={[styles.textDetails, { color: colors.textChat }]}>
+                <CustomText fontFamily='InterRegular' fontSize={15} style={[styles.textDetails, { color: colors.textChat }]}>
                     {processedProjectDetails || 'No details available'}
                 </CustomText>
             </View>

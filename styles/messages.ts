@@ -29,7 +29,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     emptyText: {
-        color: '#A0AEC0',
         textAlign: 'center',
         marginTop: 32,
         fontSize: 16,

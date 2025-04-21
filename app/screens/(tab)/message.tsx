@@ -216,8 +216,8 @@ export default function MessageScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
-                <Text style={styles.emptyText}>Loading...</Text>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+                <Text style={[styles.emptyText, { color: colors.text5 }]}>Loading...</Text>
             </SafeAreaView>
         );
     }

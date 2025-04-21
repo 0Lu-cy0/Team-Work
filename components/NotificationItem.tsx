@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { useThemeContext } from '@/context/ThemeContext';
+import CustomText from '@/constants/CustomText';
 
 interface NotificationItemProps {
     content: string;
-    relatedName?: string; // Tên của project/task/group (nếu có)
+    relatedName?: string; // Name of project/task/group (if available)
     timestamp: string;
-    avatar?: string; // URL của avatar (nếu có)
+    avatar?: string; // URL of avatar (if available)
     onPress?: () => void;
 }
 
@@ -16,27 +18,52 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     avatar,
     onPress,
 }) => {
+    const { colors } = useThemeContext();
     return (
         <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
             {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatar} />
             ) : (
-                <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarText}>
+                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.box2 }]}>
+                    <CustomText
+                        fontFamily="InterSemiBold"
+                        fontSize={18}
+                        style={[styles.avatarText, { color: colors.text5 }]}
+                    >
                         {content.charAt(0).toUpperCase()}
-                    </Text>
+                    </CustomText>
                 </View>
             )}
             <View style={styles.content}>
-                <Text style={styles.message} numberOfLines={1}>
-                    {content}
-                </Text>
-                {relatedName && (
-                    <Text style={styles.relatedName} numberOfLines={1}>
-                        {relatedName}
-                    </Text>
-                )}
-                <Text style={styles.time}>{timestamp}</Text>
+                <View style={{ flex: 8 }}>
+                    <CustomText
+                        fontFamily="Inter"
+                        fontSize={20}
+                        style={[{ color: colors.textNoti, flexWrap: 'wrap' }]}
+                        numberOfLines={2}
+                    >
+                        {content}
+                    </CustomText>
+                    {relatedName && (
+                        <CustomText
+                            fontFamily="Inter"
+                            fontSize={20}
+                            style={styles.relatedName}
+                            numberOfLines={1}
+                        >
+                            {relatedName}
+                        </CustomText>
+                    )}
+                </View>
+                <View style={{ flex: 1 }}>
+                    <CustomText
+                        fontFamily="Inter"
+                        fontSize={12}
+                        style={[styles.time, { color: colors.text5 }]}
+                    >
+                        {timestamp}
+                    </CustomText>
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -45,47 +72,35 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: 'black',
+        paddingVertical: 16,
     },
     avatar: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        marginRight: 12,
     },
     avatarPlaceholder: {
         width: 48,
         height: 48,
         borderRadius: 24,
         marginRight: 12,
-        backgroundColor: '#2A3A5A',
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatarText: {
-        color: '#FFFFFF',
         fontSize: 18,
         fontWeight: 'bold',
     },
     content: {
         flex: 1,
         justifyContent: 'center',
-    },
-    message: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '600',
+        flexDirection: 'row'
     },
     relatedName: {
         color: '#FFC107',
-        fontSize: 12,
         marginTop: 4,
     },
     time: {
-        color: '#A0AEC0',
-        fontSize: 12,
         marginTop: 4,
         position: 'absolute',
         right: 0,

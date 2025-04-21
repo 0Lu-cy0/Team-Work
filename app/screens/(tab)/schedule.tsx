@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
     View,
-    Text,
     StyleSheet,
     SafeAreaView,
     TouchableOpacity,
@@ -14,6 +13,8 @@ import { useRouter, useNavigation } from 'expo-router';
 import { supabase } from '@/services/supabase';
 import { TaskItem } from '@/components/TaskItem';
 import Icon from '@/components/Icon';
+import CustomText from '@/constants/CustomText';
+import { useThemeContext } from '@/context/ThemeContext';
 
 interface Task {
     id: string;
@@ -27,7 +28,7 @@ interface Task {
 
 interface Day {
     date: number;
-    day: string; // Thứ (Mon, Tue,...)
+    day: string; // Shortened English weekday names (Mon, Tue,...)
 }
 
 export default function ScheduleScreen() {
@@ -39,6 +40,7 @@ export default function ScheduleScreen() {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const { colors } = useThemeContext();
 
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -51,7 +53,7 @@ export default function ScheduleScreen() {
         while (date.getMonth() === month) {
             days.push({
                 date: date.getDate(),
-                day: date.toLocaleString('default', { weekday: 'short' }),
+                day: date.toLocaleString('en-US', { weekday: 'short' }),
             });
             date.setDate(date.getDate() + 1);
         }
@@ -66,11 +68,24 @@ export default function ScheduleScreen() {
     }, [selectedMonth]);
 
     const fetchTasks = async (date: string) => {
+        console.log(`[fetchTasks] Starting fetch for date: ${date}`);
+
         const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData.user) {
-            console.error('Error fetching user:', userError);
+            console.error(`[fetchTasks] Error fetching user: ${userError?.message || 'No user found'}`, {
+                date,
+                error: userError,
+            });
             return;
         }
+        console.log(`[fetchTasks] Fetched user: ${userData.user.id}`, {
+            userId: userData.user.id,
+            email: userData.user.email,
+        });
+
+        // Create a date range for the selected date
+        const startOfDay = `${date}T00:00:00.000Z`; // e.g., 2025-04-16T00:00:00.000Z
+        const endOfDay = `${date}T23:59:59.999Z`;   // e.g., 2025-04-16T23:59:59.999Z
 
         const { data: tasksData, error: tasksError } = await supabase
             .from('tasks')
@@ -83,16 +98,29 @@ export default function ScheduleScreen() {
                 project_id,
                 status
             `)
-            .eq('due_date', date)
+            .gte('due_date', startOfDay) // due_date >= start of the day
+            .lte('due_date', endOfDay)   // due_date <= end of the day
             .order('start_time', { ascending: true });
 
         if (tasksError) {
-            console.error('Error fetching tasks:', tasksError);
+            console.error(`[fetchTasks] Error fetching tasks for date ${date}: ${tasksError.message}`, {
+                date,
+                error: tasksError,
+            });
             return;
         }
+        console.log(`[fetchTasks] Fetched ${tasksData.length} tasks for date ${date}`, {
+            tasks: tasksData.map((task) => ({
+                id: task.id,
+                title: task.title,
+                due_date: task.due_date,
+            })),
+        });
 
         const tasksWithMembers = await Promise.all(
             tasksData.map(async (task: any) => {
+                console.log(`[fetchTasks] Fetching members for task: ${task.id} (${task.title})`);
+
                 const { data: teamData, error: teamError } = await supabase
                     .from('project_task_team')
                     .select(`
@@ -103,9 +131,19 @@ export default function ScheduleScreen() {
                     .eq('project_id', task.project_id);
 
                 if (teamError) {
-                    console.error('Error fetching task team:', teamError);
+                    console.error(`[fetchTasks] Error fetching members for task ${task.id}: ${teamError.message}`, {
+                        taskId: task.id,
+                        projectId: task.project_id,
+                        error: teamError,
+                    });
                     return { ...task, members: [] };
                 }
+                console.log(`[fetchTasks] Fetched ${teamData.length} members for task ${task.id}`, {
+                    members: teamData.map((member) => ({
+                        user_id: member.user_id,
+                        full_name: member.users?.full_name,
+                    })),
+                });
 
                 const members = teamData.map((member: any) => ({
                     id: member.user_id,
@@ -125,6 +163,10 @@ export default function ScheduleScreen() {
         );
 
         setTasks(tasksWithMembers);
+        console.log(`[fetchTasks] Completed fetch for date ${date}, set ${tasksWithMembers.length} tasks`, {
+            taskCount: tasksWithMembers.length,
+            tasks: tasksWithMembers.map((task) => task.id),
+        });
     };
 
     useEffect(() => {
@@ -157,18 +199,20 @@ export default function ScheduleScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.container}>
-                <Text style={styles.emptyText}>Loading...</Text>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+                <CustomText fontFamily="Inter" fontSize={16} style={styles.emptyText}>
+                    Loading...
+                </CustomText>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
             <View style={styles.calendar}>
-                <Text style={styles.month}>
-                    {selectedMonth.toLocaleString('default', { month: 'long' })}
-                </Text>
+                <CustomText fontFamily="Inter" fontSize={22} style={[styles.month, { color: colors.text5 }]}>
+                    {selectedMonth.toLocaleString('en-US', { month: 'long' })}
+                </CustomText>
                 <FlatList
                     data={daysInMonth}
                     keyExtractor={(item) => item.date.toString()}
@@ -176,39 +220,47 @@ export default function ScheduleScreen() {
                     renderItem={({ item }) => (
                         <TouchableOpacity
                             style={[
-                                styles.day,
+                                [styles.day, { backgroundColor: colors.box3 }],
                                 item.date === new Date(selectedDate).getDate() &&
                                 new Date(selectedDate).getMonth() === selectedMonth.getMonth() &&
-                                styles.selectedDay,
+                                { backgroundColor: colors.box1 },
                             ]}
                             onPress={() => handleDateSelect(item.date)}
                         >
-                            <Text
+                            <CustomText
+                                fontFamily="Inter"
+                                fontSize={12}
                                 style={[
-                                    styles.dayText,
+                                    { color: colors.text5 },
                                     item.date === new Date(selectedDate).getDate() &&
-                                    new Date(selectedDate).getMonth() === selectedMonth.getMonth() &&
-                                    styles.selectedDayText,
+                                        new Date(selectedDate).getMonth() === selectedMonth.getMonth()
+                                        ? { color: colors.text4 }
+                                        : {},
                                 ]}
                             >
                                 {item.day}
-                            </Text>
-                            <Text
+                            </CustomText>
+                            <CustomText
+                                fontFamily="Inter"
+                                fontSize={14}
                                 style={[
-                                    styles.dateText,
+                                    { color: colors.text5 },
                                     item.date === new Date(selectedDate).getDate() &&
-                                    new Date(selectedDate).getMonth() === selectedMonth.getMonth() &&
-                                    styles.selectedDateText,
+                                        new Date(selectedDate).getMonth() === selectedMonth.getMonth()
+                                        ? { color: colors.text4 }
+                                        : {},
                                 ]}
                             >
                                 {item.date}
-                            </Text>
+                            </CustomText>
                         </TouchableOpacity>
                     )}
                 />
             </View>
 
-            <Text style={styles.sectionHeader}>Today's Tasks</Text>
+            <CustomText fontFamily="Inter" fontSize={22} style={[styles.sectionHeader, { color: colors.text5 }]}>
+                Today's Tasks
+            </CustomText>
 
             <FlashList
                 data={tasks}
@@ -223,7 +275,11 @@ export default function ScheduleScreen() {
                     />
                 )}
                 estimatedItemSize={70}
-                ListEmptyComponent={<Text style={styles.emptyText}>No tasks for this day</Text>}
+                ListEmptyComponent={
+                    <CustomText fontFamily="Inter" fontSize={16} style={[styles.emptyText, { color: colors.textNoti }]}>
+                        No tasks for this day
+                    </CustomText>
+                }
             />
 
             <Modal
@@ -233,8 +289,10 @@ export default function ScheduleScreen() {
                 onRequestClose={() => setShowMonthPicker(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Select Month</Text>
+                    <View style={[styles.modalContent, { backgroundColor: colors.backgroundColor }]}>
+                        <CustomText fontFamily="InterSemiBold" fontSize={18} style={[styles.modalTitle, { color: colors.text5 }]}>
+                            Select Month
+                        </CustomText>
                         <FlatList
                             data={months}
                             keyExtractor={(item, index) => index.toString()}
@@ -243,15 +301,19 @@ export default function ScheduleScreen() {
                                     style={styles.monthItem}
                                     onPress={() => handleMonthSelect(index)}
                                 >
-                                    <Text style={styles.monthText}>{item}</Text>
+                                    <CustomText fontFamily="Inter" fontSize={16} style={[styles.monthText, { color: colors.text5 }]}>
+                                        {item}
+                                    </CustomText>
                                 </Pressable>
                             )}
                         />
                         <TouchableOpacity
-                            style={styles.closeButton}
+                            style={[styles.closeButton, { backgroundColor: colors.box1 }]}
                             onPress={() => setShowMonthPicker(false)}
                         >
-                            <Text style={styles.closeButtonText}>Close</Text>
+                            <CustomText fontFamily="Inter" fontSize={16} style={[styles.closeButtonText, { color: colors.text4 }]}>
+                                Close
+                            </CustomText>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -263,57 +325,33 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#1E2A44',
+        paddingHorizontal: 29,
     },
     headerRight: {
         marginRight: 16,
-        marginBottom: 20
+        marginBottom: 20,
     },
     calendar: {
-        paddingHorizontal: 16,
         paddingVertical: 12,
     },
     month: {
-        color: '#A0AEC0',
-        fontSize: 16,
         marginBottom: 8,
     },
     day: {
         alignItems: 'center',
-        padding: 8,
+        padding: 16,
         marginRight: 8,
-        borderRadius: 8,
-    },
-    selectedDay: {
-        backgroundColor: '#FFC107',
-    },
-    dayText: {
-        color: '#A0AEC0',
-        fontSize: 12,
-    },
-    selectedDayText: {
-        color: '#1E2A44',
-    },
-    dateText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '600',
     },
     selectedDateText: {
         color: '#1E2A44',
     },
     sectionHeader: {
-        color: '#A0AEC0',
-        fontSize: 16,
-        fontWeight: '600',
-        paddingHorizontal: 16,
         paddingVertical: 8,
+        marginBottom: 20,
     },
     emptyText: {
-        color: '#A0AEC0',
         textAlign: 'center',
         marginTop: 32,
-        fontSize: 16,
     },
     modalOverlay: {
         flex: 1,
@@ -322,17 +360,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalContent: {
-        backgroundColor: '#2A3A5A',
-        borderRadius: 12,
         padding: 20,
         width: '80%',
         maxHeight: '60%',
     },
     modalTitle: {
-        color: '#FFFFFF',
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 16,
         textAlign: 'center',
     },
     monthItem: {
@@ -341,20 +373,13 @@ const styles = StyleSheet.create({
         borderBottomColor: '#A0AEC0',
     },
     monthText: {
-        color: '#FFFFFF',
-        fontSize: 16,
         textAlign: 'center',
     },
     closeButton: {
         marginTop: 16,
-        backgroundColor: '#FFC107',
         paddingVertical: 12,
-        borderRadius: 8,
     },
     closeButtonText: {
-        color: '#1E2A44',
-        fontSize: 16,
-        fontWeight: '600',
         textAlign: 'center',
     },
 });
