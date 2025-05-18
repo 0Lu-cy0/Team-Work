@@ -55,7 +55,7 @@ const themes: Themes = {
     },
     light: {
         backgroundColor: '#FFE9B2', // Màu nền sáng
-        box1: '#FBC02F',
+        box1: '#FFBF33',
         box2: '#FFFFFF',
         box3: '#FFFFFF',
         boxMenu: '#FFBF33',

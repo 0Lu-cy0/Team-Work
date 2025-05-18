@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid'; // Nhập uuid để tạo id duy nhất
+import { v4 as uuidv4 } from 'uuid';
 import { ScrollView, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Head from '@/components/Head';
@@ -88,6 +88,7 @@ const TaskDetails: React.FC = () => {
     const [canEdit, setCanEdit] = useState<boolean>(false);
     const [taskMembersModalVisible, setTaskMembersModalVisible] = useState(false);
     const [taskMembers, setTaskMembers] = useState<{ [taskId: string]: string[] }>({});
+    const [pendingTaskMembers, setPendingTaskMembers] = useState<{ [taskId: string]: string[] }>({}); // THÊM: State lưu tạm thành viên
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const { colors } = useThemeContext();
 
@@ -166,6 +167,7 @@ const TaskDetails: React.FC = () => {
                     }
                     return acc;
                 }, {} as { [key: string]: string[] });
+                console.log('Initial taskMembers:', taskMembersMap);
                 setTaskMembers(taskMembersMap);
             }
         } catch (error) {
@@ -314,25 +316,16 @@ const TaskDetails: React.FC = () => {
 
         const taskTeamChannel = supabase
             .channel(`project_task_team-${processID}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'project_task_team', filter: `project_id=eq.${processID}` }, (payload) => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'project_task_team', filter: `project_id=eq.${processID}` }, async (payload) => {
                 try {
+                    console.log('TaskTeamChannel payload:', payload);
                     if (payload.eventType === 'INSERT') {
                         const newEntry = payload.new as { user_id: string; task_id: string };
                         if (newEntry.task_id && newEntry.user_id) {
                             setTaskMembers((prev) => {
                                 const updated = { ...prev };
                                 updated[newEntry.task_id] = updated[newEntry.task_id] ? [...updated[newEntry.task_id], newEntry.user_id] : [newEntry.user_id];
-                                return updated;
-                            });
-                        }
-                    } else if (payload.eventType === 'UPDATE') {
-                        const updatedEntry = payload.new as { user_id: string; task_id: string };
-                        if (updatedEntry.task_id && updatedEntry.user_id) {
-                            setTaskMembers((prev) => {
-                                const updated = { ...prev };
-                                if (!updated[updatedEntry.task_id].includes(updatedEntry.user_id)) {
-                                    updated[updatedEntry.task_id] = [...updated[updatedEntry.task_id], updatedEntry.user_id];
-                                }
+                                console.log('Updated taskMembers after INSERT:', updated);
                                 return updated;
                             });
                         }
@@ -342,18 +335,38 @@ const TaskDetails: React.FC = () => {
                             setTaskMembers((prev) => {
                                 const updated = { ...prev };
                                 updated[deletedEntry.task_id] = updated[deletedEntry.task_id]?.filter((userId) => userId !== deletedEntry.user_id) || [];
+                                console.log('Updated taskMembers after DELETE:', updated);
+                                return updated;
+                            });
+                        }
+                    } else if (payload.eventType === 'UPDATE') {
+                        const { task_id } = payload.new as { task_id: string };
+                        if (task_id) {
+                            const { data, error } = await supabase
+                                .from('project_task_team')
+                                .select('user_id')
+                                .eq('project_id', processID)
+                                .eq('task_id', task_id);
+                            if (error) {
+                                console.error('Error fetching task members on UPDATE:', error);
+                                return;
+                            }
+                            const memberIds = data
+                                .map(m => m.user_id)
+                                .filter((id): id is string => id !== null);
+                            setTaskMembers((prev) => {
+                                const updated = { ...prev, [task_id]: memberIds };
+                                console.log('Updated taskMembers after UPDATE:', updated);
                                 return updated;
                             });
                         }
                     }
                 } catch (error) {
-                    logger.error("Error handling task team channel update", error, { payload });
+                    console.error('Error handling task team channel:', error, { payload });
                 }
             })
             .subscribe((status, error) => {
-                if (error) {
-                    logger.error("Task team channel subscription error", error, { processID });
-                }
+                if (error) console.error('Task team channel subscription error:', error);
             });
 
         return () => {
@@ -369,72 +382,84 @@ const TaskDetails: React.FC = () => {
     }, [processID, currentUserId]);
 
     const handleSaveTaskMembers = async (taskId: string, selectedMemberIds: string[]) => {
-        if (!canEdit || !processID) {
-            logger.warn("Cannot save task members: no edit permission or invalid processID", { canEdit, processID });
+        if (!canEdit || !processID || !taskId) {
+            console.warn('Cannot save task members: invalid params', { canEdit, processID, taskId });
             return;
         }
 
         try {
-            // Kiểm tra thành viên hợp lệ
+            console.log('handleSaveTaskMembers: taskId', taskId, 'selectedMemberIds', selectedMemberIds);
+            // Lưu tạm vào pendingTaskMembers thay vì gọi API ngay
+            setPendingTaskMembers((prev) => ({
+                ...prev,
+                [taskId]: [...selectedMemberIds],
+            }));
+            console.log('Updated pendingTaskMembers:', { ...pendingTaskMembers, [taskId]: selectedMemberIds });
+        } catch (error) {
+            console.error('Unexpected error in handleSaveTaskMembers:', error);
+            alert('Đã có lỗi bất ngờ xảy ra!');
+        }
+    };
+
+    const commitTaskMembers = async (taskId: string, selectedMemberIds: string[]) => {
+        // Hàm này thực hiện cập nhật cơ sở dữ liệu
+        try {
+            console.log('commitTaskMembers: taskId', taskId, 'selectedMemberIds', selectedMemberIds);
             const { data: projectMembers, error: fetchError } = await supabase
                 .from('project_team')
                 .select('user_id')
                 .eq('project_id', processID);
             if (fetchError) {
-                logger.error("Error fetching project members", fetchError, { processID });
+                console.error('Error fetching project members:', fetchError);
+                alert('Lỗi khi kiểm tra thành viên dự án!');
                 return;
             }
             const projectMemberIds = projectMembers.map(m => m.user_id);
             const invalidMembers = selectedMemberIds.filter(id => !projectMemberIds.includes(id));
             if (invalidMembers.length > 0) {
-                logger.warn("Invalid members selected", { invalidMembers });
-                alert('Một số thành viên không thuộc dự án');
+                console.warn('Invalid members selected:', invalidMembers);
+                alert('Một số thành viên không thuộc dự án!');
                 return;
             }
 
-            // Lấy danh sách thành viên hiện tại của task từ bảng project_task_team
             const { data: existingTaskMembers, error: fetchTaskMembersError } = await supabase
                 .from('project_task_team')
                 .select('id, user_id')
                 .eq('project_id', processID)
                 .eq('task_id', taskId);
             if (fetchTaskMembersError) {
-                logger.error("Error fetching existing task members", fetchTaskMembersError, { taskId });
-                alert('Đã có lỗi xảy ra khi lấy danh sách thành viên task!');
+                console.error('Error fetching task members:', fetchTaskMembersError);
+                alert('Lỗi khi lấy danh sách thành viên task!');
                 return;
             }
 
-            // Tạo bản đồ để ánh xạ user_id với id của bản ghi hiện có
             const existingMembersMap = new Map<string, string>(
                 existingTaskMembers
                     .filter(member => member.user_id !== null)
                     .map(member => [member.user_id as string, member.id])
             );
 
-            // Thêm hoặc cập nhật thành viên
             if (selectedMemberIds.length > 0) {
-                const upsertData: { id: string; project_id: string; task_id: string; user_id: string; assigned_at: string }[] =
-                    selectedMemberIds.map(user_id => ({
-                        id: existingMembersMap.get(user_id) || uuidv4(), // Sử dụng id hiện có nếu tồn tại, nếu không thì tạo mới
-                        project_id: processID,
-                        task_id: taskId,
-                        user_id,
-                        assigned_at: new Date().toISOString(),
-                    }));
-
+                const upsertData = selectedMemberIds.map(user_id => ({
+                    id: existingMembersMap.get(user_id) || uuidv4(),
+                    project_id: processID,
+                    task_id: taskId,
+                    user_id,
+                    assigned_at: new Date().toISOString(),
+                }));
                 const { error: upsertError } = await supabase
                     .from('project_task_team')
-                    .upsert(upsertData); // Không cần onConflict, vì dùng id để xác định bản ghi
+                    .upsert(upsertData);
                 if (upsertError) {
-                    logger.error("Error upserting task members", upsertError, { taskId, selectedMemberIds });
-                    alert('Đã có lỗi xảy ra khi lưu thành viên task!');
+                    console.error('Error upserting task members:', upsertError);
+                    alert('Lỗi khi lưu thành viên task!');
                     return;
                 }
             }
 
-            // Xóa thành viên không còn trong danh sách
-            const currentMembers = taskMembers[taskId] || [];
-            const membersToRemove = currentMembers.filter(userId => !selectedMemberIds.includes(userId));
+            const membersToRemove = existingTaskMembers
+                .filter(member => !selectedMemberIds.includes(member.user_id as string))
+                .map(member => member.user_id as string);
             if (membersToRemove.length > 0) {
                 const { error: deleteError } = await supabase
                     .from('project_task_team')
@@ -443,16 +468,19 @@ const TaskDetails: React.FC = () => {
                     .eq('task_id', taskId)
                     .in('user_id', membersToRemove);
                 if (deleteError) {
-                    logger.error("Error deleting task members", deleteError, { taskId, membersToRemove });
-                    alert('Đã có lỗi xảy ra khi xóa thành viên task!');
+                    console.error('Error deleting task members:', deleteError);
+                    alert('Lỗi khi xóa thành viên task!');
                     return;
                 }
             }
 
-            // Cập nhật state
-            setTaskMembers(prev => ({ ...prev, [taskId]: selectedMemberIds }));
+            setTaskMembers(prev => {
+                const updated = { ...prev, [taskId]: [...selectedMemberIds] };
+                console.log('Updated taskMembers:', updated);
+                return updated;
+            });
         } catch (error) {
-            logger.error("Unexpected error in handleSaveTaskMembers", error, { taskId, selectedMemberIds });
+            console.error('Unexpected error in commitTaskMembers:', error);
             alert('Đã có lỗi bất ngờ xảy ra!');
         }
     };
@@ -493,6 +521,7 @@ const TaskDetails: React.FC = () => {
 
             setTasks(prev => [...prev, data]);
             setTaskMembers(prev => ({ ...prev, [data.id]: [] }));
+            setPendingTaskMembers(prev => ({ ...prev, [data.id]: [] })); // THÊM: Khởi tạo pendingTaskMembers cho task mới
             setModalAddTaskVisible(false);
             setNameTask('');
         } catch (error) {
@@ -508,18 +537,9 @@ const TaskDetails: React.FC = () => {
         }
 
         try {
-            // Kiểm tra và xử lý dueDateTask và dueTimeTask
             const isValidDate = (date: unknown): boolean => date instanceof Date && !isNaN(date.getTime());
-
-            const dueDate = isValidDate(dueDateTask)
-                ? dueDateTask.toISOString()
-                : new Date().toISOString(); // Fallback về ngày hiện tại
-
-            const dueTime = isValidDate(dueTimeTask)
-                ? dueTimeTask.toISOString()
-                : new Date().toISOString(); // Fallback về thời gian hiện tại
-
-            // Debug giá trị đầu vào
+            const dueDate = isValidDate(dueDateTask) ? dueDateTask.toISOString() : new Date().toISOString();
+            const dueTime = isValidDate(dueTimeTask) ? dueTimeTask.toISOString() : new Date().toISOString();
             console.log('dueDateTask:', dueDateTask, '->', dueDate);
             console.log('dueTimeTask:', dueTimeTask, '->', dueTime);
 
@@ -529,7 +549,7 @@ const TaskDetails: React.FC = () => {
                     title: nameTask,
                     due_date: dueDate,
                     start_time: dueTime,
-                    end_time: dueTime, // Giữ end_time bằng start_time như code gốc
+                    end_time: dueTime,
                 })
                 .eq('id', selectedTask.id);
 
@@ -537,6 +557,15 @@ const TaskDetails: React.FC = () => {
                 logger.error("Error updating task", error, { taskId: selectedTask.id, nameTask });
                 alert('Lỗi khi cập nhật task: ' + error.message);
                 return;
+            }
+
+            // Áp dụng thay đổi thành viên từ pendingTaskMembers
+            if (pendingTaskMembers[selectedTask.id]) {
+                await commitTaskMembers(selectedTask.id, pendingTaskMembers[selectedTask.id]);
+                setPendingTaskMembers((prev) => {
+                    const { [selectedTask.id]: _, ...rest } = prev;
+                    return rest;
+                });
             }
 
             setTaskModalVisible(false);
@@ -562,6 +591,10 @@ const TaskDetails: React.FC = () => {
 
             setTasks((prev) => prev.filter((task) => task.id !== selectedTask.id));
             setTaskModalVisible(false);
+            setPendingTaskMembers((prev) => {
+                const { [selectedTask.id]: _, ...rest } = prev;
+                return rest;
+            });
         } catch (error) {
             logger.error("Unexpected error in handleDeleteTask", error, { taskId: selectedTask?.id });
         }
@@ -572,7 +605,6 @@ const TaskDetails: React.FC = () => {
             logger.warn("Cannot toggle task status: no edit permission", { taskId });
             return;
         }
-
         try {
             const taskToUpdate = tasks.find((task) => task.id === taskId);
             if (!taskToUpdate) {
@@ -617,6 +649,21 @@ const TaskDetails: React.FC = () => {
         }
     };
 
+    const handleCancelTaskModal = () => {
+        // THÊM: Reset pendingTaskMembers và đóng modal
+        setTaskModalVisible(false);
+        if (selectedTask?.id) {
+            setPendingTaskMembers((prev) => {
+                const { [selectedTask.id]: _, ...rest } = prev;
+                return rest;
+            });
+        }
+        setNameTask('');
+        setDueDateTask(new Date());
+        setDueTimeTask(new Date());
+        setSelectedTask(null);
+    };
+
     const renderTaskItem = useCallback(({ item }: { item: TaskRow }) => (
         <View
             style={[
@@ -638,6 +685,7 @@ const TaskDetails: React.FC = () => {
                 }}
                 onLongPress={() => {
                     try {
+                        console.log('Selecting task:', item.id, 'Members:', taskMembers[item.id]);
                         setSelectedTask(item);
                         setNameTask(item.title || '');
                         setDueDateTask(new Date(item.due_date || Date.now()));
@@ -664,7 +712,7 @@ const TaskDetails: React.FC = () => {
                 )}
             </TouchableOpacity>
         </View>
-    ), [canEdit, tasks]);
+    ), [canEdit, tasks, taskMembers]);
 
     return (
         <View style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
@@ -757,7 +805,7 @@ const TaskDetails: React.FC = () => {
                         keyExtractor={(item) => item.id.toString()}
                         renderItem={renderTaskItem}
                         estimatedItemSize={58}
-                        extraData={{ canEdit }}
+                        extraData={{ canEdit, taskMembers }}
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.flashListContent}
                     />
@@ -771,7 +819,7 @@ const TaskDetails: React.FC = () => {
                 dueTime={dueTimeTask}
                 showDatePicker={showDatePicker}
                 showTimePicker={showTimePicker}
-                onClose={() => setTaskModalVisible(false)}
+                onClose={handleCancelTaskModal} // SỬA: Sử dụng handleCancelTaskModal
                 handleChangeTask={canEdit ? handleChangeTask : () => { }}
                 handleDeleteTask={canEdit ? handleDeleteTask : () => { }}
                 onShowDatePicker={() => canEdit && setShowDatePicker(true)}
@@ -780,8 +828,9 @@ const TaskDetails: React.FC = () => {
                 dateOnpress={canEdit ? onChangeDate : () => { }}
                 canEdit={canEdit}
                 members={processedMembers}
-                selectedMembers={selectedTask ? taskMembers[selectedTask.id] || [] : []}
+                selectedMembers={selectedTask ? (pendingTaskMembers[selectedTask.id] || taskMembers[selectedTask.id] || []) : []} // SỬA: Sử dụng pendingTaskMembers nếu có
                 onSaveMembers={(selected) => selectedTask && handleSaveTaskMembers(selectedTask.id, selected)}
+                onCancelMembers={() => selectedTask && setPendingTaskMembers((prev) => ({ ...prev, [selectedTask.id]: taskMembers[selectedTask.id] || [] }))} // THÊM: Reset pendingTaskMembers khi cancel
                 projectId={processID}
                 taskId={selectedTask?.id}
             />
@@ -820,13 +869,13 @@ const TaskDetails: React.FC = () => {
                 projectId={processID}
                 taskId={tasks[tasks.length - 1]?.id}
             />
-            <TeamMembersModal visible={teamModalVisible} onClose={() => setTeamModalVisible(false)} members={processedMembers} />
             <TaskMembersModal
                 visible={taskMembersModalVisible}
                 onClose={() => setTaskMembersModalVisible(false)}
                 members={processedMembers}
-                selectedMembers={selectedTask ? taskMembers[selectedTask.id] || [] : []}
+                selectedMembers={selectedTask ? (pendingTaskMembers[selectedTask.id] || taskMembers[selectedTask.id] || []) : []} // SỬA: Sử dụng pendingTaskMembers nếu có
                 onSave={(selected) => selectedTask && handleSaveTaskMembers(selectedTask.id, selected)}
+                onCancel={() => selectedTask && setPendingTaskMembers((prev) => ({ ...prev, [selectedTask.id]: taskMembers[selectedTask.id] || [] }))} // THÊM: Reset pendingTaskMembers khi cancel
                 projectId={processID}
                 taskId={selectedTask?.id}
             />

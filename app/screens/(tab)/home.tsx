@@ -10,15 +10,10 @@ import { supabase } from '@/services/supabase';
 import { Database } from '@/services/database.types';
 import Icon from '@/components/Icon';
 import { useThemeContext } from '@/context/ThemeContext';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 type ProjectRow = Database['public']['Tables']['projects']['Row'];
 type TaskRow = Database['public']['Tables']['tasks']['Row'];
-
-interface ProjectTeamWithUser {
-    project_id: string;
-    user_id: string;
-    users: { avatar: string | null };
-}
 
 interface Project extends ProjectRow {
     tasks: TaskRow[];
@@ -55,6 +50,57 @@ const Home = () => {
     const { colors } = useThemeContext();
     const completedScrollRef = useRef<ScrollView>(null);
     const ongoingScrollRef = useRef<ScrollView>(null);
+
+    // Animated values cho hiệu ứng nhấn
+    const completedSeeAllScale = useSharedValue(1);
+    const ongoingSeeAllScale = useSharedValue(1);
+
+    const completedSeeAllStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: withTiming(completedSeeAllScale.value, { duration: 100 }) }],
+    }));
+
+    const ongoingSeeAllStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: withTiming(ongoingSeeAllScale.value, { duration: 100 }) }],
+    }));
+
+    const handleSeeAllPress = (type: 'completed' | 'ongoing') => {
+        // Logic khi nhấn "See all" (có thể thêm điều hướng sau này)
+        console.log(`Pressed See all for ${type} projects`);
+        // Ví dụ: router.push('/screens/allProjects', { type });
+    };
+
+    const handleSeeAllPressIn = (type: 'completed' | 'ongoing') => {
+        if (type === 'completed') {
+            completedSeeAllScale.value = 0.95; // Thu nhỏ khi nhấn
+        } else {
+            ongoingSeeAllScale.value = 0.95;
+        }
+    };
+
+    const handleSeeAllPressOut = (type: 'completed' | 'ongoing') => {
+        if (type === 'completed') {
+            completedSeeAllScale.value = 1; // Phục hồi kích thước
+        } else {
+            ongoingSeeAllScale.value = 1;
+        }
+    };
+    const settingScale = useSharedValue(1);
+    const settingAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: withTiming(settingScale.value, { duration: 100 }) }],
+    }));
+
+    const handleSettingPress = () => {
+        console.log('Pressed Settings');
+        // Ví dụ: router.push('/screens/settings');
+    };
+
+    const handleSettingPressIn = () => {
+        settingScale.value = 0.95; // Thu nhỏ khi nhấn
+    };
+
+    const handleSettingPressOut = () => {
+        settingScale.value = 1; // Phục hồi kích thước
+    };
 
     const fetchUserAndProjects = async () => {
         setLoading(true);
@@ -398,14 +444,30 @@ const Home = () => {
                     placeholder="Search projects"
                     leftIcon={<Icon category="screens" name="search" />}
                 />
-                <View style={[styles.setting, { backgroundColor: colors.box1 }]}>
-                    <Icon category="screens" name="setting" />
-                </View>
+                <TouchableOpacity
+                    onPress={handleSettingPress}
+                    onPressIn={handleSettingPressIn}
+                    onPressOut={handleSettingPressOut}
+                    activeOpacity={0.7}
+                >
+                    <Animated.View style={[styles.setting, { backgroundColor: colors.box1 }, settingAnimatedStyle]}>
+                        <Icon category="screens" name="setting" />
+                    </Animated.View>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.completedProject}>
                 <CustomText fontFamily="Inter" fontSize={26} style={[styles.title1, { color: colors.text7 }]}>Completed Projects</CustomText>
-                <CustomText fontFamily="Inter" fontSize={20} style={[styles.title2, { color: colors.text2 }]}>See all</CustomText>
+                <TouchableOpacity
+                    onPress={() => handleSeeAllPress('completed')}
+                    onPressIn={() => handleSeeAllPressIn('completed')}
+                    onPressOut={() => handleSeeAllPressOut('completed')}
+                    activeOpacity={0.7}
+                >
+                    <Animated.View style={completedSeeAllStyle}>
+                        <CustomText fontFamily="Inter" fontSize={20} style={[styles.title2, { color: colors.text2 }]}>See all</CustomText>
+                    </Animated.View>
+                </TouchableOpacity>
             </View>
             {loading ? (
                 <ActivityIndicator size="large" color={colors.box1} style={{ top: 120 }} />
@@ -419,7 +481,7 @@ const Home = () => {
                         contentContainerStyle={styles.scrollViewContent}
                         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.box1} />}
                     >
-                        {filteredProjectsData.completed.map((task, index) => ( // Sử dụng filteredProjectsData
+                        {filteredProjectsData.completed.map((task, index) => (
                             <TouchableOpacity
                                 key={task.id}
                                 style={[styles.box, { backgroundColor: colors.box1 }, index > 0 && { marginLeft: 7 }]}
@@ -430,7 +492,7 @@ const Home = () => {
                                 </View>
                                 <View style={{ flex: 1, justifyContent: 'space-between' }}>
                                     <View style={styles.teamMemberConntainer}>
-                                        <CustomText fontFamily="InterReguler" fontSize={13.25} style={{ color: colors.text6 }}>
+                                        <CustomText fontFamily="InterRegular" fontSize={13.25} style={{ color: colors.text6 }}>
                                             Team members
                                         </CustomText>
                                         <View style={styles.teamMember}>
@@ -453,7 +515,7 @@ const Home = () => {
                                     </View>
                                     <View style={styles.progressBox}>
                                         <CustomText
-                                            fontFamily="InterReguler"
+                                            fontFamily="InterRegular"
                                             style={{ fontSize: 13.25, color: colors.text6 }}
                                         >
                                             Completed
@@ -474,7 +536,16 @@ const Home = () => {
 
             <View style={styles.ongoingProject}>
                 <CustomText fontFamily="Inter" fontSize={26} style={[styles.title1, { color: colors.text7 }]}>Ongoing Project</CustomText>
-                <CustomText fontFamily="Inter" fontSize={20} style={[styles.title2, { color: colors.text2 }]}>See all</CustomText>
+                <TouchableOpacity
+                    onPress={() => handleSeeAllPress('ongoing')}
+                    onPressIn={() => handleSeeAllPressIn('ongoing')}
+                    onPressOut={() => handleSeeAllPressOut('ongoing')}
+                    activeOpacity={0.7}
+                >
+                    <Animated.View style={ongoingSeeAllStyle}>
+                        <CustomText fontFamily="Inter" fontSize={20} style={[styles.title2, { color: colors.text2 }]}>See all</CustomText>
+                    </Animated.View>
+                </TouchableOpacity>
             </View>
             {loading ? (
                 <ActivityIndicator size="large" color={colors.box1} style={{ top: 360 }} />
@@ -486,7 +557,7 @@ const Home = () => {
                     contentContainerStyle={styles.scrollViewContentVertically}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.box1} />}
                 >
-                    {filteredProjectsData.ongoing.map((project, index) => ( // Sử dụng filteredProjectsData
+                    {filteredProjectsData.ongoing.map((project, index) => (
                         <TouchableOpacity
                             key={project.id}
                             style={[styles.box1, { backgroundColor: colors.box2 }, index > 0 && { marginTop: 15 }]}
@@ -495,12 +566,11 @@ const Home = () => {
                             <CustomText fontFamily="Inter" fontSize={20} style={[styles.titleBoxUnSelected, { color: colors.text5 }]}>
                                 {project.title}
                             </CustomText>
-                            <View></View>
                             <View style={styles.box2}>
                                 <View>
                                     <View style={styles.teamMemberProject}>
                                         <CustomText
-                                            fontFamily="InterReguler"
+                                            fontFamily="InterRegular"
                                             style={{ fontSize: 13.25, color: colors.text5 }}
                                         >
                                             Team members

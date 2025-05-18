@@ -147,7 +147,7 @@ const TabRoot = () => {
                 tabBarLabel: ({ focused }) =>
                     route.name === 'Create New Project' ? null : (
                         <CustomText
-                            fontFamily={'InterReguler'}
+                            fontFamily={'InterRegular'}
                             fontSize={10}
                             style={{ color: focused ? '#FED36A' : '#617D8A', marginTop: 15 }}
                         >

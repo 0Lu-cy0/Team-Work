@@ -34,6 +34,7 @@ interface TaskModalProps {
     members: Member[];
     selectedMembers: string[];
     onSaveMembers: (selectedMemberIds: string[]) => void;
+    onCancelMembers?: () => void; // THÊM: Prop để xử lý cancel members
     projectId?: string;
     taskId?: string;
 }
@@ -57,6 +58,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
     members,
     selectedMembers,
     onSaveMembers,
+    onCancelMembers,
     projectId,
     taskId,
 }) => {
@@ -69,7 +71,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
         <>
             <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
                 <View style={styles.modalBackground}>
-                    <View style={[styles.modalContainer, { backgroundColor: colors.backgroundColor }]} >
+                    <View style={[styles.modalContainer, { backgroundColor: colors.backgroundColor }]}>
                         <Pressable onPress={onClose} style={styles.closeButton}>
                             <View style={styles.exitBox}>
                                 <CustomText fontFamily="Inter" fontSize={22} style={{ color: colors.border }}>X</CustomText>
@@ -133,15 +135,19 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 {showTimePicker && <DateTimePicker value={dueTime} mode="time" is24Hour={true} display="default" onChange={timeOnpress} />}
                 {showDatePicker && <DateTimePicker value={dueDate} mode="date" display="default" onChange={dateOnpress} />}
             </Modal>
-            <TaskMembersModal
-                visible={membersModalVisible}
-                onClose={() => setMembersModalVisible(false)}
-                members={members}
-                selectedMembers={selectedMembers}
-                onSave={onSaveMembers}
-                projectId={projectId}
-                taskId={taskId}
-            />
+            {taskId && (
+                <TaskMembersModal
+                    key={taskId}
+                    visible={membersModalVisible}
+                    onClose={() => setMembersModalVisible(false)}
+                    members={members}
+                    selectedMembers={selectedMembers}
+                    onSave={onSaveMembers}
+                    onCancel={onCancelMembers} // THÊM: Truyền onCancelMembers
+                    projectId={projectId}
+                    taskId={taskId}
+                />
+            )}
         </>
     );
 };

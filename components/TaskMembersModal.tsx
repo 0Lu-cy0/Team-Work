@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, View, FlatList, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import CustomText from '@/constants/CustomText';
 import MyButton from '@/components/MyButton';
@@ -9,6 +9,7 @@ interface TaskMembersModalProps {
     members: Member[];
     selectedMembers: string[];
     onSave: (selectedMemberIds: string[]) => void;
+    onCancel?: () => void; // THÊM: Prop để xử lý cancel
     projectId?: string;
     taskId?: string;
 }
@@ -26,10 +27,17 @@ const TaskMembersModal: React.FC<TaskMembersModalProps> = ({
     members,
     selectedMembers,
     onSave,
+    onCancel,
     projectId,
     taskId,
 }) => {
     const [selected, setSelected] = useState<string[]>(selectedMembers);
+
+    // Đồng bộ selected với selectedMembers khi prop thay đổi
+    useEffect(() => {
+        console.log('TaskMembersModal: taskId', taskId, 'selectedMembers', selectedMembers);
+        setSelected(selectedMembers);
+    }, [selectedMembers, taskId]);
 
     const toggleMember = (userId: string) => {
         setSelected((prev) =>
@@ -40,7 +48,15 @@ const TaskMembersModal: React.FC<TaskMembersModalProps> = ({
     };
 
     const handleSave = () => {
+        console.log('Saving members for task', taskId, 'selected', selected);
         onSave(selected);
+        onClose();
+    };
+
+    const handleCancel = () => {
+        console.log('Canceling members for task', taskId, 'resetting to', selectedMembers);
+        setSelected(selectedMembers); // Reset về selectedMembers ban đầu
+        onCancel?.(); // Gọi onCancel để thông báo cho parent
         onClose();
     };
 
@@ -79,7 +95,7 @@ const TaskMembersModal: React.FC<TaskMembersModalProps> = ({
                     />
                     <View style={styles.buttonContainer}>
                         <MyButton
-                            onPress={onClose}
+                            onPress={handleCancel} // SỬA: Sử dụng handleCancel
                             title={<CustomText fontSize={16}>Cancel</CustomText>}
                             style={styles.cancelButton}
                         />

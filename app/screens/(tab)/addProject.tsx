@@ -373,7 +373,7 @@ const AddProject = () => {
 
                 <MyButton
                     onPress={handleCreateProject}
-                    title={<CustomText fontFamily='InterSemiBold' fontSize={18} style={{ color: colors.text5 }}>Create</CustomText>}
+                    title={<CustomText fontFamily='InterSemiBold' fontSize={18} style={{ color: colors.text4 }}>Create</CustomText>}
                     disabled={isLoading}
                     style={{
                         backgroundColor: isLoading ? '#B0BEC5' : '#FED36A',
@@ -395,7 +395,7 @@ const AddProject = () => {
 
             <Modal visible={showPermissionModal} transparent animationType="slide">
                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
-                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 20 }}>
+                    <View style={{ backgroundColor: colors.backgroundColor, padding: 20 }}>
                         <CustomText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
                             Chọn Quyền
                         </CustomText>
@@ -418,15 +418,14 @@ const AddProject = () => {
                         <TouchableOpacity
                             onPress={() => setShowPermissionModal(false)}
                             style={{
-                                backgroundColor: '#FED36A',
+                                backgroundColor: colors.box1,
                                 padding: 10,
-                                borderRadius: 5,
                                 alignItems: 'center',
                                 marginTop: 10,
                             }}
                             disabled={isLoading}
                         >
-                            <CustomText style={{ color: '#000000' }}>Đóng</CustomText>
+                            <CustomText style={{ color: colors.text4 }}>Đóng</CustomText>
                         </TouchableOpacity>
                     </View>
                 </View>

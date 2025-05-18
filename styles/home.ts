@@ -19,10 +19,10 @@ const styles = StyleSheet.create({
         left: 0,
     },
     headerText2: {
-        transform: [
-            { scaleX: 2.6 },
-            { translateX: 27 }
-        ],
+        // transform: [
+        //     { scaleX: 2.6 },
+        //     { translateX: 27 }
+        // ],
         fontSize: 22.29,
     },
     headerRight: {
@@ -44,6 +44,7 @@ const styles = StyleSheet.create({
         flex: 1.4,
         marginLeft: 16,
         height: "100%",
+        aspectRatio: 1,
         justifyContent: 'center',
         alignItems: 'center'
     },
