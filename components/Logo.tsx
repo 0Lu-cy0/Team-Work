@@ -4,6 +4,7 @@ import { useRoute } from "@react-navigation/native";
 import CustomText from "../constants/CustomText";
 import { useThemeContext } from '../context/ThemeContext';
 import Icon from '@/components/Icon';
+
 export default function ResizableLogoBox() {
     const route = useRoute();
     const { colors } = useThemeContext();
@@ -44,7 +45,7 @@ export default function ResizableLogoBox() {
             {/* Dòng chữ */}
             <Text
                 style={{
-                    width: boxStyle.width, // Chiều ngang bằng hộp
+                    width: (boxStyle.width || 0) * 1.3, // Tăng chiều ngang lên 1.3 lần để chữ không bị xuống dòng
                     textAlign: "center",
                     fontSize: fontSize, // Responsive fontSize
                     fontFamily: 'Montserrat', // Font chung cho cả chữ
@@ -59,7 +60,6 @@ export default function ResizableLogoBox() {
         </View>
     );
 }
-
 
 const styles = StyleSheet.create({
     box: {

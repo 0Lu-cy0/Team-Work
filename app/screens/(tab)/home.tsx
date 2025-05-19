@@ -64,14 +64,12 @@ const Home = () => {
     }));
 
     const handleSeeAllPress = (type: 'completed' | 'ongoing') => {
-        // Logic khi nhấn "See all" (có thể thêm điều hướng sau này)
         console.log(`Pressed See all for ${type} projects`);
-        // Ví dụ: router.push('/screens/allProjects', { type });
     };
 
     const handleSeeAllPressIn = (type: 'completed' | 'ongoing') => {
         if (type === 'completed') {
-            completedSeeAllScale.value = 0.95; // Thu nhỏ khi nhấn
+            completedSeeAllScale.value = 0.95;
         } else {
             ongoingSeeAllScale.value = 0.95;
         }
@@ -79,7 +77,7 @@ const Home = () => {
 
     const handleSeeAllPressOut = (type: 'completed' | 'ongoing') => {
         if (type === 'completed') {
-            completedSeeAllScale.value = 1; // Phục hồi kích thước
+            completedSeeAllScale.value = 1;
         } else {
             ongoingSeeAllScale.value = 1;
         }
@@ -91,15 +89,14 @@ const Home = () => {
 
     const handleSettingPress = () => {
         console.log('Pressed Settings');
-        // Ví dụ: router.push('/screens/settings');
     };
 
     const handleSettingPressIn = () => {
-        settingScale.value = 0.95; // Thu nhỏ khi nhấn
+        settingScale.value = 0.95;
     };
 
     const handleSettingPressOut = () => {
-        settingScale.value = 1; // Phục hồi kích thước
+        settingScale.value = 1;
     };
 
     const fetchUserAndProjects = async () => {
@@ -218,10 +215,8 @@ const Home = () => {
         setRefreshing(false);
     };
 
-    // Logic tìm kiếm
     useEffect(() => {
         if (!search.trim()) {
-            // Nếu search rỗng, hiển thị toàn bộ dữ liệu gốc
             setFilteredProjectsData(projectsData);
             return;
         }
@@ -596,7 +591,13 @@ const Home = () => {
                                     <View style={{ marginTop: 10, flex: 1 }}>
                                         <CustomText
                                             fontFamily="Inter"
-                                            style={{ lineHeight: 25, width: 113, fontSize: 13.25, color: colors.text5 }}
+                                            style={{
+                                                lineHeight: 13.25,
+                                                // width: 200, // Tăng chiều rộng để chứa đầy đủ text
+                                                fontSize: 13.25,
+                                                color: colors.text5,
+                                                // flexShrink: 1,
+                                            }}
                                         >
                                             Due on : {' '}
                                             {new Date(project.due_date).toLocaleDateString('en-GB', {
